@@ -2,6 +2,8 @@
 import React from 'react'
 import type { Node, Edge, NodeChange, EdgeChange } from '../types'
 import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react'
+import { v4 as uuidv4 } from 'uuid'
+import type { Connection } from '@xyflow/react'
 
 import { useWorkflowStore } from '../store/index'
 
@@ -36,6 +38,18 @@ export function useNodesInteractions() {
   const handleNodeClick = (event: React.MouseEvent, node: Node) => {
     set_active_node(node.id)
   }
+  // 连接节点
+  const handleConnect = ({ source, sourceHandle, target, targetHandle }: Connection) => {
+    const newEdge = {
+      id: uuidv4(),
+      type: 'CustomEdge',
+      source: source!,
+      target: target!,
+      sourceHandle,
+      targetHandle,
+    }
+    setEdges([...edges, newEdge])
+  }
   return {
     handleNodeDragStart,
     handleNodeDrag,
@@ -45,5 +59,6 @@ export function useNodesInteractions() {
     handleNodeClick,
     handleNodesChange,
     handleEdgesChange,
+    handleConnect,
   }
 }

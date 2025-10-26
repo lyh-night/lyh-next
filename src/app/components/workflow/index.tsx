@@ -15,6 +15,7 @@ import Control from './operator/control'
 import CandidateNode from './nodes/CandidateNode'
 import { Panel } from './panel'
 import type { Node, Edge } from './types'
+import CustomConnectionLine from './line/custom-connection-line'
 
 function Workflow() {
   const nodes: Node[] = useWorkflowStore((state) => state.nodes)
@@ -29,6 +30,7 @@ function Workflow() {
     handleNodeDragStop,
     handleNodesChange,
     handleEdgesChange,
+    handleConnect,
   } = useNodesInteractions()
   const { handleEdgeEnter, handleEdgeLeave } = useEdgesInteractions()
 
@@ -98,6 +100,8 @@ function Workflow() {
         onNodeDragStop={handleNodeDragStop}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
+        onConnect={handleConnect}
+        connectionLineComponent={CustomConnectionLine}
       >
         <Background
           gap={[14, 14]}
@@ -123,17 +127,17 @@ const initialNodes = [
     data: { title: 'LLM', type: 'llm' },
     type: 'llm',
   },
-  {
-    id: 'end',
-    position: { x: 600, y: 100 },
-    data: { title: '结束', type: 'end' },
-    type: 'end',
-  },
+  // {
+  //   id: 'end',
+  //   position: { x: 600, y: 100 },
+  //   data: { title: '结束', type: 'end' },
+  //   type: 'end',
+  // },
 ]
 
 const initialEdges = [
   { id: 'n1-n2', source: 'start', target: 'center', type: 'CustomEdge', data: {} },
-  { id: 'n1-n3', source: 'center', target: 'end', type: 'CustomEdge', data: {} },
+  // { id: 'n1-n3', source: 'center', target: 'end', type: 'CustomEdge', data: {} },
 ]
 
 export default function WorkflowWithDefaultContext() {
