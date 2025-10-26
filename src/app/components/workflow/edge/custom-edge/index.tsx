@@ -5,9 +5,12 @@ import { BaseEdge, EdgeLabelRenderer, getBezierPath } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 import { cn } from '@/utils/classnames'
 import { NodeSelector } from '../../operator/node-selector'
+import { useWorkflowStore } from '../../store/index'
 
 export default function CustomEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -16,6 +19,8 @@ export default function CustomEdge({
   targetPosition,
   data,
 }: EdgeProps) {
+  const hover_node = useWorkflowStore((state) => state.hover_node)
+  const hover_edge = useWorkflowStore((state) => state.hover_edge)
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: sourceX - 8,
     sourceY,
@@ -26,13 +31,16 @@ export default function CustomEdge({
     curvature: 0.16,
   })
 
+  const _isHoverNode = hover_node == source || hover_node == target
+  const _isHover = hover_edge == id
+
   return (
     <>
       <BaseEdge
         id={id}
         path={edgePath}
         style={{
-          stroke: data?._isHoverNode ? '#2b59e6' : '',
+          stroke: _isHoverNode ? '#2b59e6' : '',
           strokeWidth: 2,
         }}
       />
@@ -45,7 +53,7 @@ export default function CustomEdge({
           }}
           className={cn('nodrag nopan')}
         >
-          {data?._isHover ? <NodeSelector edge_id={id} /> : null}
+          {_isHover ? <NodeSelector edge_id={id} /> : null}
         </div>
       </EdgeLabelRenderer>
     </>

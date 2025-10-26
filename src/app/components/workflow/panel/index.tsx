@@ -1,18 +1,15 @@
 'use client'
 
-import { useStore } from '@xyflow/react'
-import type { Node } from '../types'
 import { RiBookOpenLine, RiCrosshairLine, RiMoreFill, RiCloseLine } from '@remixicon/react'
 
 import Baseicon from '../BaseIcon'
 import { useWorkflowStore } from '../store/index'
 
 export function Panel() {
-  // const nodes: Node[] = useNodes()
-  const nodes = useStore((state) => state.nodes)
-  const current_node = nodes.find((item) => item.data._isActive)
-  const set_panel_show = useWorkflowStore((state) => state.set_panel_show)
-  console.log(current_node, '当前节点')
+  const nodes = useWorkflowStore((state) => state.nodes)
+  const active_node = useWorkflowStore((state) => state.active_node)
+  const set_active_node = useWorkflowStore((state) => state.set_active_node)
+  const current_node = nodes.find((item) => item.id == active_node)
 
   return (
     <div className="mr-[4px] h-full w-[400px] rounded-[16px] bg-white">
@@ -33,7 +30,7 @@ export function Panel() {
           <div className="flex h-[24px] w-[24px] cursor-pointer items-center justify-center rounded-[4px]">
             <RiCloseLine
               className="text-text-tertiary h-4 w-4"
-              onClick={() => set_panel_show(false)}
+              onClick={() => set_active_node('')}
             />
           </div>
         </div>

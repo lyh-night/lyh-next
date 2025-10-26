@@ -1,34 +1,17 @@
 // 编排边相关事件
 
 import React from 'react'
-import { useStoreApi } from '@xyflow/react'
 import type { Edge as ReactFlowEdge } from '@xyflow/react'
-import { produce } from 'immer'
+import { useWorkflowStore } from '../store/index'
 
 export function useEdgesInteractions() {
-  const store = useStoreApi()
+  const set_hover_edge = useWorkflowStore((state) => state.set_hover_edge)
 
   const handleEdgeEnter = (event: React.MouseEvent, edge: ReactFlowEdge) => {
-    const { nodes, edges, setNodes, setEdges } = store.getState()
-    const newEdges = produce(edges, (draft) => {
-      draft.forEach((item) => {
-        if (item.id == edge.id) {
-          item.data._isHover = true
-        }
-      })
-    })
-    setEdges(newEdges)
+    set_hover_edge(edge.id)
   }
   const handleEdgeLeave = (event: React.MouseEvent, edge: ReactFlowEdge) => {
-    const { nodes, edges, setNodes, setEdges } = store.getState()
-    const newEdges = produce(edges, (draft) => {
-      draft.forEach((item) => {
-        if (item.id == edge.id) {
-          item.data._isHover = false
-        }
-      })
-    })
-    setEdges(newEdges)
+    set_hover_edge('')
   }
   return {
     handleEdgeEnter,

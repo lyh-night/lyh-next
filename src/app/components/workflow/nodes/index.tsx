@@ -1,10 +1,12 @@
+import type { ComponentType } from 'react'
+
 import Start from './start/node'
 import End from './end/node'
 import Llm from './llm/node'
 
 // 导出节点类型
-export const nodeTypes = {
-  Start,
-  End,
-  Llm,
+export const nodeTypes: Record<string, ComponentType<any>> = {
+  start: Start,
+  end: End,
+  llm: Llm,
 }

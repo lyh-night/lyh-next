@@ -26,16 +26,12 @@ const operation_list = [
   { label: '最大化图布', value: 'max_canvas' },
 ]
 
-export type PanelProps = {
-  onSelect: (open: string) => void
-}
-
-export default function Control({ onSelect }: PanelProps) {
-  const addRef = useRef(null)
-  function handleSelect(e) {
+export default function Control() {
+  const addRef = useRef<HTMLButtonElement>(null)
+  function handleClick(event: React.MouseEvent) {
+    event.stopPropagation()
     if (addRef.current) {
       addRef.current.click()
-      onSelect(e)
     }
   }
   return (
@@ -43,7 +39,7 @@ export default function Control({ onSelect }: PanelProps) {
       {operation_list.map((item) => {
         if (item.value == 'add') {
           return (
-            <Popover key={item.value}>
+            <Popover key={item.value} onClick={handleClick}>
               <PopoverButton
                 ref={addRef}
                 className={cn(
@@ -66,7 +62,7 @@ export default function Control({ onSelect }: PanelProps) {
                 anchor={{ gap: 4, to: 'right' }}
                 className="z-[11] box-border rounded-[2px] bg-white p-[6px] shadow-xl transition duration-200 ease-in-out data-closed:-translate-y-1 data-closed:opacity-0"
               >
-                <NodeSelectorList onSelect={handleSelect} />
+                <NodeSelectorList />
               </PopoverPanel>
             </Popover>
           )
