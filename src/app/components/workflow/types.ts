@@ -1,5 +1,10 @@
 // 编排 ts
-import type { Edge as ReactFlowEdge, Node as ReactFlowNode } from '@xyflow/react'
+import type {
+  Edge as ReactFlowEdge,
+  Node as ReactFlowNode,
+  NodeChange as ReactFlowNodeChange,
+  EdgeChange as ReactFlowEdgeChange,
+} from '@xyflow/react'
 
 export type CommonNodeType<T = object> = {
   title?: string
@@ -14,3 +19,6 @@ export type Node<T = object> = ReactFlowNode<CommonNodeType<T>>
 export type NodeProps<T = object> = { id: string; data: CommonNodeType<T> }
 
 export type Edge = ReactFlowEdge
+
+export type NodeChange = ReactFlowNodeChange<Node>
+export type EdgeChange = ReactFlowEdgeChange<Edge>

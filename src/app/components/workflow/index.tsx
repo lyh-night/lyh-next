@@ -14,12 +14,22 @@ import ZoomInOut from './operator/zoom-in-out'
 import Control from './operator/control'
 import CandidateNode from './nodes/CandidateNode'
 import { Panel } from './panel'
+import type { Node, Edge } from './types'
 
 function Workflow() {
-  const nodes = useWorkflowStore((state) => state.nodes)
-  const edges = useWorkflowStore((state) => state.edges)
+  const nodes: Node[] = useWorkflowStore((state) => state.nodes)
+  const edges: Edge[] = useWorkflowStore((state) => state.edges)
 
-  const { handleNodeEnter, handleNodeLeave, handleNodeClick } = useNodesInteractions()
+  const {
+    handleNodeEnter,
+    handleNodeLeave,
+    handleNodeClick,
+    handleNodeDragStart,
+    handleNodeDrag,
+    handleNodeDragStop,
+    handleNodesChange,
+    handleEdgesChange,
+  } = useNodesInteractions()
   const { handleEdgeEnter, handleEdgeLeave } = useEdgesInteractions()
 
   const candidate_node_show = useWorkflowStore((state) => state.candidate_node_show)
@@ -83,6 +93,11 @@ function Workflow() {
         onNodeClick={handleNodeClick}
         onEdgeMouseEnter={handleEdgeEnter}
         onEdgeMouseLeave={handleEdgeLeave}
+        onNodeDragStart={handleNodeDragStart}
+        onNodeDrag={handleNodeDrag}
+        onNodeDragStop={handleNodeDragStop}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
       >
         <Background
           gap={[14, 14]}
