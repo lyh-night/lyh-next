@@ -29,6 +29,8 @@ export type workflowStoreShape = {
   }) => void
   candidate_node_type: string
   set_candidate_node_type: (candidate_node_type: string) => void
+  controlMode: 'pointer' | 'hand'
+  setControlMode: (controlMode: workflowStoreShape['controlMode']) => void
 }
 
 export const workflowStore = createStore<workflowStoreShape>((set, get) => ({
@@ -53,6 +55,8 @@ export const workflowStore = createStore<workflowStoreShape>((set, get) => ({
   set_mouse_position: (mouse_position) => set({ mouse_position }),
   candidate_node_type: '',
   set_candidate_node_type: (candidate_node_type) => set({ candidate_node_type }),
+  controlMode: 'hand',
+  setControlMode: (controlMode) => set({ controlMode }),
 }))
 
 export function useWorkflowStore<T>(selector: (state: workflowStoreShape) => T): T {

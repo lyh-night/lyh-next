@@ -37,6 +37,7 @@ function Workflow() {
   const candidate_node_show = useWorkflowStore((state) => state.candidate_node_show)
   const active_node = useWorkflowStore((state) => state.active_node)
   const set_mouse_position = useWorkflowStore((state) => state.set_mouse_position)
+  const controlMode = useWorkflowStore((state) => state.controlMode)
 
   const workflowContainerRef = useRef<HTMLDivElement>(null)
   // 处理添加候选节点跟随鼠标移动
@@ -102,6 +103,8 @@ function Workflow() {
         onEdgesChange={handleEdgesChange}
         onConnect={handleConnect}
         connectionLineComponent={CustomConnectionLine}
+        panOnDrag={controlMode === 'hand'}
+        selectionOnDrag={controlMode === 'pointer'}
       >
         <Background
           gap={[14, 14]}

@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef } from 'react'
-
 import {
   RiAddCircleFill,
   RiAspectRatioLine,
@@ -10,12 +9,11 @@ import {
   RiHand,
   RiStickyNoteAddLine,
 } from '@remixicon/react'
-
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
-import { NodeSelectorList } from './node-selector'
 import Tooltip from '@/components/tooltip'
-
 import { cn } from '@/utils/classnames'
+import { NodeSelectorList } from './node-selector'
+import { useWorkflowStore } from '../store/index'
 
 const operation_list = [
   { label: '添加节点', value: 'add' },
@@ -32,6 +30,16 @@ export default function Control() {
     event.stopPropagation()
     if (addRef.current) {
       addRef.current.click()
+    }
+  }
+  const controlMode = useWorkflowStore((state) => state.controlMode)
+  const setControlMode = useWorkflowStore((state) => state.setControlMode)
+  function handleControl(event: React.MouseEvent, value: string) {
+    event.stopPropagation()
+    if (value == 'pointer_mode') {
+      setControlMode('pointer')
+    } else if (value == 'cursor_mode') {
+      setControlMode('hand')
     }
   }
   return (
@@ -77,13 +85,21 @@ export default function Control() {
               popupClassName="p-[4px] text-[12px]"
             >
               <div
+                onClick={(e) => handleControl(e, item.value)}
                 className={cn(
-                  'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#676f83] hover:bg-[#f3f4f7]',
+                  'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#676f83]',
+                  item.value == 'pointer_mode' && controlMode == 'pointer' ? 'bg-[#edf1fd]' : '',
+                  item.value == 'cursor_mode' && controlMode == 'hand' ? 'bg-[#edf1fd]' : '',
+                  !['pointer_mode', 'cursor_mode'].includes(item.value) ? 'hover:bg-[#f3f4f7]' : '',
                 )}
               >
                 {item.value == 'add_annotation' && <RiStickyNoteAddLine size="16" />}
-                {item.value == 'pointer_mode' && <RiCursorLine size="16" />}
-                {item.value == 'cursor_mode' && <RiHand size="16" />}
+                {item.value == 'pointer_mode' && (
+                  <RiCursorLine size="16" color={controlMode == 'pointer' ? '#155aef' : ''} />
+                )}
+                {item.value == 'cursor_mode' && (
+                  <RiHand size="16" color={controlMode == 'hand' ? '#155aef' : ''} />
+                )}
                 {item.value == 'organize_point' && <RiFunctionAddLine size="16" />}
                 {item.value == 'max_canvas' && <RiAspectRatioLine size="16" />}
               </div>
