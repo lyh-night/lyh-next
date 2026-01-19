@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@import './variable.css';
+@import './custom.css';
+@import './shadcn.css';
+
+html,
+body,
+:root {
+  width: 100%;
+  height: 100%;
+  font-size: 14px;
+}

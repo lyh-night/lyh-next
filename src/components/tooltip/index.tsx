@@ -100,19 +100,19 @@ const Tooltip: FC<TooltipProps> = ({
         {children || (
           <div
             data-testid={triggerTestId}
-            className={triggerClassName || 'h-3.5 w-3.5 shrink-0 p-[1px]'}
+            className={triggerClassName || 'h-3.5 w-3.5 shrink-0 p-[2px]'}
           >
             <RiQuestionLine className="hover: h-full w-full" />
           </div>
         )}
       </PortalToFollowElemTrigger>
-      <PortalToFollowElemContent className="z-[9999]">
+      <PortalToFollowElemContent className="z-9999">
         {popupContent && (
           <div
             className={cn(
               'bg-white',
               !noDecoration &&
-                'relative max-w-[300px] rounded-md px-3 py-2 text-left break-words shadow-lg',
+                'relative max-w-[300px] rounded-md px-3 py-2 text-left wrap-break-word shadow-lg',
               popupClassName,
             )}
             onMouseEnter={() => triggerMethod === 'hover' && setHoverPopup()}
