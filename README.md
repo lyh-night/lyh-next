@@ -47,6 +47,53 @@ pnpm build
 pnpm start
 ```
 
+### Docker 部署
+
+#### 使用 Docker Compose（推荐）
+
+1. 启动服务（包含 Next.js + PostgreSQL）：
+
+```bash
+docker compose up -d --build
+```
+
+2. 首次启动后执行数据库同步：
+
+```bash
+docker compose exec app pnpm db:push
+```
+
+3. 访问应用：
+
+```bash
+http://localhost:3000
+```
+
+4. 停止服务：
+
+```bash
+docker compose down
+```
+
+如果需要同时删除数据库卷数据：
+
+```bash
+docker compose down -v
+```
+
+> 说明：`docker-compose.yml` 默认使用容器内数据库连接（`APP_DATABASE_URL`，默认 `db:5432`）。生产环境请至少修改 `NEXTAUTH_SECRET`，并按实际情况配置 `APP_DATABASE_URL`、`NEXTAUTH_URL`。
+
+#### 仅构建应用镜像
+
+```bash
+docker build -t lyh-next:latest .
+docker run -d --name lyh-next -p 3000:3000 \
+  -e DATABASE_URL="postgresql://postgres:postgres@<db-host>:5432/lyh-next-db" \
+  -e NEXTAUTH_URL="http://localhost:3000" \
+  -e NEXTAUTH_SECRET="please-change-this-secret" \
+  lyh-next:latest
+```
+
 ### 代码规范
 
 ESLint & Prettier
