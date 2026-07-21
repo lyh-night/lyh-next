@@ -9,7 +9,7 @@
 | 框架     | Next.js 15（App Router）、React 19、TypeScript     |
 | UI       | TailwindCSS 4、shadcn/ui、Lucide React、Remix Icon |
 | 数据     | Prisma 7、PostgreSQL 16                            |
-| 认证     | NextAuth v5                                        |
+| 认证     | NextAuth v5 beta                                   |
 | 状态     | Zustand                                            |
 | 表单     | React Hook Form + Zod                              |
 | 工具库   | ahooks、immer、lodash-es                           |
@@ -28,15 +28,46 @@
 - [pnpm](https://pnpm.io/)
 - [Docker](https://www.docker.com/get-started/) & Docker Compose
 
-### 1. 克隆项目
+### 1. 安装依赖
 
 ```bash
-git clone https://github.com/lyh/lyh-next.git
+git clone https://github.com/lyh-night/lyh-next.git
 cd lyh-next
 pnpm install
 ```
 
-### 2. 启动数据库
+### 2. 配置环境变量
+
+复制示例文件并填写配置：
+
+```bash
+cp .env.example .env
+```
+
+`.env` 文件各字段说明：
+
+```bash
+# ── 数据库 ──────────────────────────────────────────────
+# 使用 Docker 容器时，保持默认即可（连接本地 6432 端口）
+# 格式：postgresql://用户名:密码@主机:端口/数据库名
+DATABASE_URL="postgresql://postgres:postgres@localhost:6432/lyh-next-db"
+
+# ── NextAuth ────────────────────────────────────────────
+# 应用访问地址，生产环境改为实际域名
+NEXTAUTH_URL="http://localhost:3000"
+
+# 会话加密密钥，用于签名 JWT 和加密敏感信息
+# 生产环境务必替换为强随机字符串（可用 `openssl rand -base64 32` 生成）
+NEXTAUTH_SECRET="your-secret-key-here"
+```
+
+| 字段              | 必填 | 说明                           |
+| ----------------- | ---- | ------------------------------ |
+| `DATABASE_URL`    | 是   | PostgreSQL 连接字符串          |
+| `NEXTAUTH_URL`    | 是   | 应用访问地址                   |
+| `NEXTAUTH_SECRET` | 是   | 会话加密密钥，生产环境必须替换 |
+
+### 3. 启动数据库
 
 项目使用 Docker Compose 管理 PostgreSQL，无需手动安装数据库。
 
@@ -62,49 +93,13 @@ pnpm db:push
 
 > 可通过 `pnpm db:studio` 打开 Prisma Studio 管理数据库。
 
-### 3. 配置环境变量
-
-复制示例文件并填写配置：
-
-```bash
-cp .env.example .env
-```
-
-`.env` 文件各字段说明：
-
-```bash
-# ── 数据库 ──────────────────────────────────────────────
-# 使用 Docker 容器时，保持默认即可（连接本地 6432 端口）
-# 格式：postgresql://用户名:密码@主机:端口/数据库名
-DATABASE_URL="postgresql://postgres:postgres@localhost:6432/lyh-next-db"
-
-# ── NextAuth ────────────────────────────────────────────
-# 应用访问地址，生产环境改为实际域名
-NEXTAUTH_URL="http://localhost:3000"
-
-# 会话加密密钥，用于签名 JWT 和加密敏感信息
-# 生产环境务必替换为强随机字符串（可用 `openssl rand -base64 32` 生成）
-NEXTAUTH_SECRET="your-secret-key-here"
-
-# ── 应用 ────────────────────────────────────────────────
-# 应用名称，显示在登录页等位置
-NEXT_PUBLIC_APP_NAME="lyh-next"
-```
-
-| 字段                   | 必填 | 说明                           |
-| ---------------------- | ---- | ------------------------------ |
-| `DATABASE_URL`         | 是   | PostgreSQL 连接字符串          |
-| `NEXTAUTH_URL`         | 是   | 应用访问地址                   |
-| `NEXTAUTH_SECRET`      | 是   | 会话加密密钥，生产环境必须替换 |
-| `NEXT_PUBLIC_APP_NAME` | 否   | 应用名称                       |
-
 ### 4. 启动开发服务器
 
 ```bash
 pnpm dev
 ```
 
-访问 http://localhost:3000。
+访问 http://localhost:3000
 
 ### 常用命令
 
@@ -117,7 +112,6 @@ pnpm dev
 | `pnpm db:studio` | 打开 Prisma Studio   |
 | `pnpm lint`      | 代码检查             |
 | `pnpm format`    | 代码格式化           |
-| `pnpm typecheck` | 类型检查             |
 
 ## Docker 部署
 
@@ -129,10 +123,10 @@ pnpm dev
 docker compose up -d --build
 ```
 
-首次启动后执行数据库同步：
+首次启动后，在宿主机执行数据库同步：
 
 ```bash
-docker compose exec app pnpm db:push
+pnpm db:push
 ```
 
 停止服务：
@@ -170,7 +164,6 @@ docker run -d --name lyh-next -p 3000:3000 \
 ```bash
 pnpm lint        # 代码检查
 pnpm format      # 代码格式化
-pnpm typecheck   # 类型检查
 ```
 
 ## 目录结构
@@ -190,12 +183,6 @@ prisma/
 └── schema.prisma      # 数据库模型定义
 public/                # 静态资源
 ```
-
-## 后续计划
-
-- 增加连线标签、条件分支节点、增加连线辅助线
-- 增加优化撤销/重做功能、支持查看操作历史
-- 引入右键菜单与快捷键操作
 
 ## License
 
