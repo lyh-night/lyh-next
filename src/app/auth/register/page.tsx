@@ -34,7 +34,6 @@ const formSchema = z
     confirmPassword: z.string().min(6, {
       message: '确认密码必须至少包含 6 个字符',
     }),
-    name: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: '两次输入的密码不一致',
@@ -52,7 +51,6 @@ export default function RegisterPage() {
       email: '',
       password: '',
       confirmPassword: '',
-      name: '',
     },
   })
 
@@ -68,7 +66,6 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email: values.email,
           password: values.password,
-          name: values.name || undefined,
         }),
       })
 
@@ -149,19 +146,6 @@ export default function RegisterPage() {
                       <FormLabel>确认密码</FormLabel>
                       <FormControl>
                         <Input placeholder="再次输入密码" {...field} type="password" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>姓名（可选）</FormLabel>
-                      <FormControl>
-                        <Input placeholder="输入姓名" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
