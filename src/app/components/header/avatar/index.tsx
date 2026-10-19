@@ -2,6 +2,13 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu'
+
 export default function Avatar() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -21,22 +28,20 @@ export default function Avatar() {
 
     return (
       <div className="flex flex-1 items-center justify-end gap-3">
-        {/* <span className="hidden text-sm text-gray-700 md:inline">{displayName}</span> */}
-        <div className="group relative">
-          <div className="h-[36px] w-[36px] cursor-pointer rounded-[50%] bg-[#2d5de6] text-center leading-[36px] font-medium text-white">
-            {firstLetter}
-          </div>
-          <div className="absolute top-full right-0 hidden w-[100px] pt-1 group-hover:block hover:block">
-            <div className="ring-opacity-5 rounded-md bg-white p-[10px] shadow-lg ring-1 ring-black">
-              <button
-                onClick={() => signOut({ callbackUrl: '/auth/login' })}
-                className="block w-full cursor-pointer px-4 py-2 text-center text-sm text-gray-700 hover:bg-gray-100"
-              >
-                退出登录
-              </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="outline-none focus:outline-none">
+            <div className="h-[36px] w-[36px] cursor-pointer rounded-[50%] bg-[#2d5de6] text-center leading-[36px] font-medium text-white">
+              {firstLetter}
             </div>
-          </div>
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem>设置</DropdownMenuItem>
+            <DropdownMenuItem>版本信息</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/auth/login' })}>
+              退出登录
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     )
   }

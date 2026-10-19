@@ -12,3 +12,8 @@ body,
   height: 100%;
   font-size: 14px;
 }
+
+div {
+  border-color: var(--color-border);
+  color: var(--color-foreground);
+}
