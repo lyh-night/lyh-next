@@ -5,17 +5,32 @@ import prettierPlugin from 'eslint-plugin-prettier'
 import nextPlugin from '@next/eslint-plugin-next'
 
 export default [
+  // 全局忽略（生成物与构建产物不参与 lint）
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/dist/**',
+      '**/.turbo/**',
+      '**/src/generated/**',
+      'next-env.d.ts',
+    ],
+  },
+
   // JS 推荐规则
   js.configs.recommended,
 
   // TS 推荐规则
   ...tseslint.configs.recommended,
 
-  // Next.js 推荐规则
+  // Next.js 插件注册（规则仅作用于应用包，避免对 packages 施加 App Router 规则）
   {
     plugins: {
       '@next/next': nextPlugin,
     },
+  },
+  {
+    files: ['apps/frontend/**/*.{js,jsx,ts,tsx}'],
     rules: {
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules, // 包含 web vitals 规则

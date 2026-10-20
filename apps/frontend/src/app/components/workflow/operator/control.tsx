@@ -1,0 +1,112 @@
+'use client'
+
+import { useRef } from 'react'
+import {
+  RiAddCircleFill,
+  RiAspectRatioLine,
+  RiCursorLine,
+  RiFunctionAddLine,
+  RiHand,
+  RiStickyNoteAddLine,
+} from '@remixicon/react'
+import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
+import Tooltip from '@lyh-next/components/tooltip'
+import { cn } from '@lyh-next/utils'
+import { NodeSelectorList } from './node-selector'
+import { useWorkflowStore } from '../store/index'
+
+const operation_list = [
+  { label: '添加节点', value: 'add' },
+  { label: '添加注释', value: 'add_annotation' },
+  { label: '指针模式', value: 'pointer_mode' },
+  { label: '手模式', value: 'cursor_mode' },
+  { label: '整理节点', value: 'organize_point' },
+  { label: '最大化图布', value: 'max_canvas' },
+]
+
+export default function Control() {
+  const addRef = useRef<HTMLButtonElement>(null)
+  function handleClick(event: React.MouseEvent) {
+    event.stopPropagation()
+    if (addRef.current) {
+      addRef.current.click()
+    }
+  }
+  const controlMode = useWorkflowStore((state) => state.controlMode)
+  const setControlMode = useWorkflowStore((state) => state.setControlMode)
+  function handleControl(event: React.MouseEvent, value: string) {
+    event.stopPropagation()
+    if (value == 'pointer_mode') {
+      setControlMode('pointer')
+    } else if (value == 'cursor_mode') {
+      setControlMode('hand')
+    }
+  }
+  return (
+    <div className="pointer-events-auto flex flex-col items-center rounded-lg bg-white p-0.5 shadow-lg">
+      {operation_list.map((item) => {
+        if (item.value == 'add') {
+          return (
+            <Popover key={item.value} onClick={handleClick}>
+              <PopoverButton
+                ref={addRef}
+                className={cn(
+                  'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#676f83] hover:bg-[#f3f4f7] focus:outline-none',
+                )}
+              >
+                <Tooltip
+                  key={item.value}
+                  position="top"
+                  popupContent={item.label}
+                  needsDelay={false}
+                  offset={4}
+                  popupClassName="p-[4px] text-[12px]"
+                >
+                  <RiAddCircleFill size="16" />
+                </Tooltip>
+              </PopoverButton>
+              <PopoverPanel
+                transition
+                anchor={{ gap: 4, to: 'right' }}
+                className="data-closed:-translate-y-1 data-closed:opacity-0 z-[11] box-border rounded-[2px] bg-white p-[6px] shadow-xl transition duration-200 ease-in-out"
+              >
+                <NodeSelectorList />
+              </PopoverPanel>
+            </Popover>
+          )
+        } else {
+          return (
+            <Tooltip
+              key={item.value}
+              position="top"
+              popupContent={item.label}
+              needsDelay={false}
+              offset={4}
+              popupClassName="p-[4px] text-[12px]"
+            >
+              <div
+                onClick={(e) => handleControl(e, item.value)}
+                className={cn(
+                  'flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#676f83]',
+                  item.value == 'pointer_mode' && controlMode == 'pointer' ? 'bg-[#edf1fd]' : '',
+                  item.value == 'cursor_mode' && controlMode == 'hand' ? 'bg-[#edf1fd]' : '',
+                  !['pointer_mode', 'cursor_mode'].includes(item.value) ? 'hover:bg-[#f3f4f7]' : '',
+                )}
+              >
+                {item.value == 'add_annotation' && <RiStickyNoteAddLine size="16" />}
+                {item.value == 'pointer_mode' && (
+                  <RiCursorLine size="16" color={controlMode == 'pointer' ? '#155aef' : ''} />
+                )}
+                {item.value == 'cursor_mode' && (
+                  <RiHand size="16" color={controlMode == 'hand' ? '#155aef' : ''} />
+                )}
+                {item.value == 'organize_point' && <RiFunctionAddLine size="16" />}
+                {item.value == 'max_canvas' && <RiAspectRatioLine size="16" />}
+              </div>
+            </Tooltip>
+          )
+        }
+      })}
+    </div>
+  )
+}

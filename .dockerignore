@@ -1,7 +1,10 @@
 .git
 .gitignore
-.next
-node_modules
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/*.tsbuildinfo
 npm-debug.log
 README.md
 docs

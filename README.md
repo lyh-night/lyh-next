@@ -13,7 +13,7 @@
 | 状态     | Zustand                                            |
 | 表单     | React Hook Form + Zod                              |
 | 工具库   | ahooks、immer、lodash-es                           |
-| 包管理   | pnpm                                               |
+| 工程化   | pnpm workspaces、Turborepo、tsdown                 |
 | 代码规范 | ESLint、Prettier、Husky、Lint-Staged、Commitlint   |
 
 ## 预览
@@ -24,8 +24,8 @@
 
 ### 前置条件
 
-- [Node.js](https://nodejs.org/) >= 18
-- [pnpm](https://pnpm.io/)
+- [Node.js](https://nodejs.org/) >= 22.18
+- [pnpm](https://pnpm.io/) >= 10（仓库锁定 `pnpm@11.7.0`）
 - [Docker](https://www.docker.com/get-started/) & Docker Compose
 
 ### 1. 安装依赖
@@ -38,10 +38,10 @@ pnpm install
 
 ### 2. 配置环境变量
 
-复制示例文件并填写配置：
+复制示例文件并填写配置（`.env` 位于应用包内，Next 与 Prisma CLI 都从这里读取）：
 
 ```bash
-cp .env.example .env
+cp apps/frontend/.env.example apps/frontend/.env
 ```
 
 `.env` 文件各字段说明：
@@ -103,15 +103,16 @@ pnpm dev
 
 ### 常用命令
 
-| 命令             | 说明                 |
-| ---------------- | -------------------- |
-| `pnpm dev`       | 启动开发服务器       |
-| `pnpm build`     | 生产构建             |
-| `pnpm start`     | 启动生产服务器       |
-| `pnpm db:push`   | 推送 Schema 到数据库 |
-| `pnpm db:studio` | 打开 Prisma Studio   |
-| `pnpm lint`      | 代码检查             |
-| `pnpm format`    | 代码格式化           |
+| 命令             | 说明                                      |
+| ---------------- | ----------------------------------------- |
+| `pnpm dev`       | 启动开发服务器（turbo 并行编排）          |
+| `pnpm build`     | 生产构建（先构建 `@lyh-next/utils`）      |
+| `pnpm start`     | 启动生产服务器                            |
+| `pnpm typecheck` | 全仓库 TypeScript 检查                    |
+| `pnpm db:push`   | 推送 Schema 到数据库（自动切到 app 目录） |
+| `pnpm db:studio` | 打开 Prisma Studio                        |
+| `pnpm lint`      | 代码检查（turbo 逐包执行）                |
+| `pnpm format`    | 代码格式化                                |
 
 ## Docker 部署
 
@@ -168,21 +169,32 @@ pnpm format      # 代码格式化
 
 ## 目录结构
 
+仓库为 pnpm workspaces + Turborepo monorepo：
+
 ```
-src/
-├── app/               # Next.js App Router 页面
-├── components/        # 公共组件
-├── generated/         # Prisma 生成的客户端代码
-├── provider/          # Provider 组件（NextAuth 等）
-├── server/            # 服务器端逻辑
-│   ├── auth.ts        # NextAuth 配置
-│   └── prisma.ts      # Prisma 客户端实例
-├── styles/            # 全局样式（Tailwind）
-└── utils/             # 工具函数
-prisma/
-└── schema.prisma      # 数据库模型定义
-public/                # 静态资源
+apps/
+└── frontend/                  # @lyh-next/frontend —— Next.js 应用
+    ├── src/
+    │   ├── app/               # App Router 页面与页面内业务组件
+    │   ├── provider/          # NextAuth Provider
+    │   ├── server/            # auth.ts / prisma.ts
+    │   ├── styles/            # 全局样式（Tailwind 入口）
+    │   ├── utils/             # 仅应用内使用的工具（clipboard）
+    │   ├── generated/         # Prisma 生成的客户端（勿手改）
+    │   └── middleware.ts
+    ├── prisma/schema.prisma    # 数据库模型定义
+    ├── public/                 # 静态资源
+    ├── .env                    # 环境变量
+    └── next.config.ts
+packages/
+├── components/                # @lyh-next/components —— shadcn/tooltip/popover 等公共组件（源码包）
+└── utils/                     # @lyh-next/utils —— 格式化函数与 cn（tsdown 构建）
+turbo.json                     # 任务编排与缓存
+pnpm-workspace.yaml            # workspace 与依赖构建白名单
+tsconfig.base.json             # 共享 TS 配置
 ```
+
+包之间依赖方向：`frontend → components → utils`。
 
 ## License
 

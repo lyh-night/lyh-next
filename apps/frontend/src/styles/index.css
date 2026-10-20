@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* 组件包源码必须显式纳入扫描，否则组件类会被裁掉 */
+@source '../../../../packages/components/src/**/*.{ts,tsx}';
+
+@import './variable.css';
+@import './custom.css';
+@import './shadcn.css';
+
+html,
+body,
+:root {
+  width: 100%;
+  height: 100%;
+  font-size: 14px;
+}
+
+div {
+  border-color: var(--color-border);
+  color: var(--color-foreground);
+}

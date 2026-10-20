@@ -1,8 +1,11 @@
-ignoredBuiltDependencies:
-  - '@tailwindcss/oxide'
-  - sharp
+packages:
+  - apps/*
+  - packages/*
 
-onlyBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
-  - prisma
+# pnpm 11 起用 allowBuilds 控制依赖安装脚本（旧的 onlyBuiltDependencies 已失效）
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  prisma: true
+  sharp: false
+  '@tailwindcss/oxide': false

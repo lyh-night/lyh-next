@@ -13,6 +13,15 @@
 
 ---
 
+## 工程化（monorepo）
+
+- pnpm workspaces（`apps/*` + `packages/*`）
+- Turborepo 2（任务编排与构建缓存）
+- tsdown（`@lyh-next/utils` 的 ESM + d.ts 构建）
+- ESLint 9 flat config / Prettier / Husky / lint-staged / Commitlint
+
+---
+
 ## UI
 
 - Tailwind CSS 4
