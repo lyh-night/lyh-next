@@ -1,7 +1,7 @@
 'use client'
 
-import { Button } from '@lyh-next/components/shadcn/button'
 import {
+  Button,
   Dialog,
   DialogClose,
   DialogContent,
@@ -10,23 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@lyh-next/components/shadcn/dialog'
-import { Input } from '@lyh-next/components/shadcn/input'
-import { Label } from '@lyh-next/components/shadcn/label'
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@lyh-next/components/shadcn/hover-card'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@lyh-next/components/shadcn/dropdown-menu'
-import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+  Input,
+  Label,
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -34,17 +28,15 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@lyh-next/components/shadcn/pagination'
-import { Popover, PopoverContent, PopoverTrigger } from '@lyh-next/components/shadcn/popover'
-import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@lyh-next/components/shadcn/select'
-import { Switch } from '@lyh-next/components/shadcn/switch'
-import {
+  Switch,
   Table,
   TableBody,
   TableCaption,
@@ -52,9 +44,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@lyh-next/components/shadcn/table'
-import { Textarea } from '@lyh-next/components/shadcn/textarea'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@lyh-next/components/shadcn/tooltip'
+  Textarea,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@lyh-next/components'
 import ThemeSwitch from '@/app/components/ThemeSwitch'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

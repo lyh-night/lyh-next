@@ -1,3 +1,14 @@
+/**
+ * @lyh-next/components 基础样式
+ *
+ * 由宿主应用的 Tailwind 入口引入（需在 @import 'tailwindcss' 之后）：
+ *   @import '@lyh-next/components/styles.css';
+ *
+ * 约定：
+ * - 主题通过 <html data-theme="light|dark"> 切换；
+ * - 这里只声明设计变量与 Tailwind 主题映射，不引入 tailwindcss 本身，
+ *   也不包含任何业务样式。
+ */
 @custom-variant dark (&:is(html[data-theme='dark'] *));
 
 html[data-theme='light'] {

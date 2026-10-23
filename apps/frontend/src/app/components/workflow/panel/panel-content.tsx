@@ -8,16 +8,14 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@lyh-next/components/shadcn/form'
-import { Input } from '@lyh-next/components/shadcn/input'
-import { Textarea } from '@lyh-next/components/shadcn/textarea'
-import {
+  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@lyh-next/components/shadcn/select'
+  Textarea,
+} from '@lyh-next/components'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'

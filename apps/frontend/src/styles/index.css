@@ -1,12 +1,13 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+/* 组件库基础样式：主题变量、dark 变体与 Tailwind 主题映射都收敛在包内 */
+@import '@lyh-next/components/styles.css';
 
 /* 组件包源码必须显式纳入扫描，否则组件类会被裁掉 */
 @source '../../../../packages/components/src/**/*.{ts,tsx}';
 
 @import './variable.css';
 @import './custom.css';
-@import './shadcn.css';
 
 html,
 body,

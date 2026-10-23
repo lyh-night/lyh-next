@@ -2,6 +2,12 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "globalEnv": ["DATABASE_URL", "NEXTAUTH_URL", "NEXTAUTH_SECRET", "NEXT_PUBLIC_APP_NAME"],
+  "globalDependencies": [
+    "tsconfig.base.json",
+    "eslint.config.js",
+    "prettier.config.js",
+    "pnpm-lock.yaml"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

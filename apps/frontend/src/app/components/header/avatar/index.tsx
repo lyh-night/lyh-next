@@ -7,7 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@lyh-next/components/shadcn/dropdown-menu'
+} from '@lyh-next/components'
 
 export default function Avatar() {
   const { data: session, status } = useSession()

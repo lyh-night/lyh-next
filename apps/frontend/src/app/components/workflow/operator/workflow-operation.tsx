@@ -1,6 +1,6 @@
 'use client'
 
-import { Button } from '@lyh-next/components/shadcn/button'
+import { Button } from '@lyh-next/components'
 import { RiArrowDownSLine } from '@remixicon/react'
 
 export default function Operator() {

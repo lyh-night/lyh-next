@@ -5,7 +5,7 @@ import { NodeProps } from '../../types'
 import { cn } from '@lyh-next/utils'
 
 import { RiPlayLine } from '@remixicon/react'
-import Tooltip from '@lyh-next/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@lyh-next/components'
 
 import NodeControl from './node-control'
 
@@ -35,8 +35,11 @@ export function BaseNode({ id, data, children }: BaseNodeProps) {
       {(id == active_node || id == hover_node) && (
         <NodeToolbar isVisible={true} position={Position.Top} align="end" offset={0}>
           <div className="mb-[4px] flex gap-[2px] rounded-[4px] bg-white p-[4px]">
-            <Tooltip popupContent="运行此步骤">
-              <RiPlayLine className="custom-icon" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <RiPlayLine className="custom-icon" />
+              </TooltipTrigger>
+              <TooltipContent side="top">运行此步骤</TooltipContent>
             </Tooltip>
             <NodeControl />
           </div>

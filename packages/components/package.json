@@ -3,13 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
-    "./shadcn/*": "./src/shadcn/*.tsx",
-    "./tooltip": "./src/tooltip/index.tsx",
-    "./tooltip/*": "./src/tooltip/*.tsx",
-    "./popover": "./src/popover/index.tsx",
-    "./portal-to-follow-elem": "./src/portal-to-follow-elem/index.tsx"
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles/index.css",
+    "./shadcn/*": "./src/shadcn/*.tsx"
   },
   "scripts": {
     "lint": "eslint .",
@@ -20,8 +20,6 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
-    "@floating-ui/react": "^0.26.25",
-    "@headlessui/react": "^2.2.8",
     "@lyh-next/utils": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -32,20 +30,18 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@remixicon/react": "^4.6.0",
-    "ahooks": "^3.8.4",
     "class-variance-authority": "^0.7.1",
     "lucide-react": "^0.562.0",
     "next-themes": "^0.4.6",
-    "react-hook-form": "^7.71.1",
+    "react-hook-form": "catalog:",
     "sonner": "^2.0.7"
   },
   "devDependencies": {
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "eslint": "^9.33.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "typescript": "^5.9.2"
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:"
   }
 }

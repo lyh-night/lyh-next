@@ -2,6 +2,16 @@ packages:
   - apps/*
   - packages/*
 
+# 统一版本目录：跨包共享的依赖只在此声明，各包用 "catalog:" 引用，
+# 避免 react / 类型包 / react-hook-form 在 workspace 内解析出多份实例。
+catalog:
+  react: 19.1.0
+  react-dom: 19.1.0
+  '@types/react': ^19.1.10
+  '@types/react-dom': ^19.1.7
+  'react-hook-form': ^7.71.1
+  typescript: ^5.9.2
+
 # pnpm 11 起用 allowBuilds 控制依赖安装脚本（旧的 onlyBuiltDependencies 已失效）
 allowBuilds:
   '@prisma/client': true
@@ -9,3 +19,5 @@ allowBuilds:
   prisma: true
   sharp: false
   '@tailwindcss/oxide': false
+  # Swagger UI 依赖的匿名统计脚本，禁止执行
+  '@scarf/scarf': false

@@ -5,7 +5,7 @@ import { RiAddCircleFill } from '@remixicon/react'
 import { useRef } from 'react'
 import { node_type_list, node_type_desc_obj } from '../config'
 
-import Tooltip from '@lyh-next/components/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@lyh-next/components'
 import Baseicon from '../BaseIcon'
 import { useWorkflowStore } from '../store/index'
 
@@ -17,25 +17,21 @@ export function NodeSelectorItem({ data }: { data: { label: string; value: strin
     set_candidate_node_show(true)
   }
   return (
-    <Tooltip
-      position="right"
-      popupClassName="w-[200px]"
-      needsDelay={false}
-      popupContent={
-        <div>
-          <Baseicon className="mb-2" name={data.value} />
-          <div className="mb-1 text-[14px]">{data.label}</div>
-          <div className="text-[12px] text-[#696f81]">{node_type_desc_obj[data.value]}</div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          onClick={() => handleAddNode(data.value)}
+          className="box-border flex w-[180px] cursor-pointer items-center rounded-[4px] px-[10px] text-left leading-[30px] text-[#354052] hover:bg-[#f4f5f7]"
+        >
+          <Baseicon name={data.value} size={20} className="mr-[8px]" />
+          {data.label}
         </div>
-      }
-    >
-      <div
-        onClick={() => handleAddNode(data.value)}
-        className="box-border flex w-[180px] cursor-pointer items-center rounded-[4px] px-[10px] text-left leading-[30px] text-[#354052] hover:bg-[#f4f5f7]"
-      >
-        <Baseicon name={data.value} size={20} className="mr-[8px]" />
-        {data.label}
-      </div>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="w-[200px]">
+        <Baseicon className="mb-2" name={data.value} />
+        <div className="mb-1 text-[14px]">{data.label}</div>
+        <div className="text-[12px] text-[#696f81]">{node_type_desc_obj[data.value]}</div>
+      </TooltipContent>
     </Tooltip>
   )
 }

@@ -101,18 +101,39 @@ pnpm dev
 
 访问 http://localhost:3000
 
+> `pnpm dev` 会同时启动前端（3000）、后端（3001）与 `packages/utils` 的 watch。
+> 也可单独启动：`pnpm dev:frontend` / `pnpm dev:backend`。
+
+### 后端
+
+`apps/backend` 是基于 NestJS 12 的独立 API 服务，默认监听 **3001**，所有路由带 `/api` 前缀：
+
+| 路径          | 说明         |
+| ------------- | ------------ |
+| `/api`        | 服务信息     |
+| `/api/health` | 健康检查     |
+| `/api/docs`   | Swagger 文档 |
+
+```bash
+cp apps/backend/.env.example apps/backend/.env   # PORT / NODE_ENV / CORS_ORIGINS，可省略
+pnpm dev:backend
+curl http://localhost:3001/api/health
+```
+
 ### 常用命令
 
-| 命令             | 说明                                      |
-| ---------------- | ----------------------------------------- |
-| `pnpm dev`       | 启动开发服务器（turbo 并行编排）          |
-| `pnpm build`     | 生产构建（先构建 `@lyh-next/utils`）      |
-| `pnpm start`     | 启动生产服务器                            |
-| `pnpm typecheck` | 全仓库 TypeScript 检查                    |
-| `pnpm db:push`   | 推送 Schema 到数据库（自动切到 app 目录） |
-| `pnpm db:studio` | 打开 Prisma Studio                        |
-| `pnpm lint`      | 代码检查（turbo 逐包执行）                |
-| `pnpm format`    | 代码格式化                                |
+| 命令                 | 说明                                      |
+| -------------------- | ----------------------------------------- |
+| `pnpm dev`           | 启动开发服务器（turbo 并行编排前后端）    |
+| `pnpm dev:backend`   | 仅启动后端（NestJS watch，3001）          |
+| `pnpm build`         | 生产构建（utils → frontend + backend）    |
+| `pnpm start`         | 启动前端生产服务器                        |
+| `pnpm start:backend` | 启动后端生产服务（`node dist/main.js`）   |
+| `pnpm typecheck`     | 全仓库 TypeScript 检查                    |
+| `pnpm db:push`       | 推送 Schema 到数据库（自动切到 app 目录） |
+| `pnpm db:studio`     | 打开 Prisma Studio                        |
+| `pnpm lint`          | 代码检查（turbo 逐包执行）                |
+| `pnpm format`        | 代码格式化                                |
 
 ## Docker 部署
 
@@ -173,28 +194,45 @@ pnpm format      # 代码格式化
 
 ```
 apps/
-└── frontend/                  # @lyh-next/frontend —— Next.js 应用
-    ├── src/
-    │   ├── app/               # App Router 页面与页面内业务组件
-    │   ├── provider/          # NextAuth Provider
-    │   ├── server/            # auth.ts / prisma.ts
-    │   ├── styles/            # 全局样式（Tailwind 入口）
-    │   ├── utils/             # 仅应用内使用的工具（clipboard）
-    │   ├── generated/         # Prisma 生成的客户端（勿手改）
-    │   └── middleware.ts
-    ├── prisma/schema.prisma    # 数据库模型定义
-    ├── public/                 # 静态资源
-    ├── .env                    # 环境变量
-    └── next.config.ts
+├── frontend/                  # @lyh-next/frontend —— Next.js 应用
+│   ├── src/
+│   │   ├── app/               # App Router 页面与页面内业务组件
+│   │   ├── provider/          # NextAuth Provider
+│   │   ├── server/            # auth.ts / prisma.ts
+│   │   ├── styles/            # Tailwind 入口与业务样式
+│   │   ├── utils/             # 仅应用内使用的工具（clipboard）
+│   │   ├── generated/         # Prisma 生成的客户端（勿手改）
+│   │   └── middleware.ts
+│   ├── prisma/schema.prisma    # 数据库模型定义
+│   ├── public/                 # 静态资源
+│   ├── .env                    # 环境变量
+│   └── next.config.ts
+└── backend/                   # @lyh-next/backend —— NestJS 服务
 packages/
-├── components/                # @lyh-next/components —— shadcn/tooltip/popover 等公共组件（源码包）
+├── components/                # @lyh-next/components —— shadcn/ui 组件库（源码包）
+│   └── src/
+│       ├── index.ts           # 统一出口
+│       ├── shadcn/            # 组件实现（同功能只保留 shadcn 版本）
+│       └── styles/index.css   # 组件库基础样式（主题变量 / dark 变体）
 └── utils/                     # @lyh-next/utils —— 格式化函数与 cn（tsdown 构建）
 turbo.json                     # 任务编排与缓存
-pnpm-workspace.yaml            # workspace 与依赖构建白名单
+pnpm-workspace.yaml            # workspace、catalog 版本目录与构建白名单
 tsconfig.base.json             # 共享 TS 配置
 ```
 
 包之间依赖方向：`frontend → components → utils`。
+
+组件统一从包名导入，样式由包提供：
+
+```tsx
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@lyh-next/components'
+```
+
+```css
+/* apps/frontend/src/styles/index.css */
+@import 'tailwindcss';
+@import '@lyh-next/components/styles.css';
+```
 
 ## License
 

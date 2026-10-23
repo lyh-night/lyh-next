@@ -10,7 +10,10 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:frontend": "pnpm --filter @lyh-next/frontend run dev",
+    "dev:backend": "pnpm --filter @lyh-next/backend run dev",
     "start": "pnpm --filter @lyh-next/frontend run start",
+    "start:backend": "pnpm --filter @lyh-next/backend run start",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",

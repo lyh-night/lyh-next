@@ -11,16 +11,16 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-import { Button } from '@lyh-next/components/shadcn/button'
 import {
+  Button,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from '@lyh-next/components/shadcn/form'
-import { Input } from '@lyh-next/components/shadcn/input'
+  Input,
+} from '@lyh-next/components'
 
 import { toast } from 'sonner'
 

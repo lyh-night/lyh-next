@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import '@/styles/index.css'
 import NextAuthProvider from '@/provider/NextAuthProvider'
 import { ThemeProvider } from 'next-themes'
-import { Toaster } from '@lyh-next/components/shadcn/sonner'
+import { Toaster } from '@lyh-next/components'
 
 export const metadata: Metadata = {
   title: 'Lyh Next',
