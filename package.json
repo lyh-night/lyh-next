@@ -17,11 +17,11 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "generate": "pnpm --filter @lyh-next/frontend run generate",
-    "db:push": "pnpm --filter @lyh-next/frontend run db:push",
-    "db:studio": "pnpm --filter @lyh-next/frontend run db:studio",
+    "generate": "pnpm --filter @lyh-next/backend run generate",
+    "db:push": "pnpm --filter @lyh-next/backend run db:push",
+    "db:studio": "pnpm --filter @lyh-next/backend run db:studio",
     "prepare": "husky",
-    "postinstall": "pnpm --filter @lyh-next/frontend run generate"
+    "postinstall": "node scripts/generate-prisma.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

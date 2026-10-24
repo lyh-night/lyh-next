@@ -62,12 +62,17 @@ cp apps/backend/.env.example apps/backend/.env
 ## 目录
 
 ```
+prisma/schema.prisma          # 数据库模型（User / Account / Session / VerificationToken）
+prisma.config.ts
 src/
 ├─ main.ts                     # 启动：前缀 /api、校验、CORS、Swagger、优雅关闭
-├─ app.module.ts               # ConfigModule + HealthModule
+├─ app.module.ts               # ConfigModule + PrismaModule + HealthModule + AuthModule
 ├─ app.controller.ts           # GET /api
 ├─ app.service.ts
+├─ auth/                       # register / verify-credentials
 ├─ health/                     # GET /api/health
+├─ prisma/                     # PrismaService（连接与断开托管）
+├─ generated/prisma/           # Prisma Client 生成物（勿手改）
 └─ common/
    ├─ filters/http-exception.filter.ts     # 统一错误结构
    └─ interceptors/logging.interceptor.ts  # 访问日志

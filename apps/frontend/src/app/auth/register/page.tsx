@@ -22,6 +22,7 @@ import {
 } from '@lyh-next/components'
 
 import { toast } from 'sonner'
+import { apiUrl } from '@/utils/api'
 
 const formSchema = z
   .object({
@@ -58,7 +59,7 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(apiUrl('/api/auth/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,7 +73,8 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        toast.error(data.error || '注册失败')
+        const message = Array.isArray(data.message) ? data.message[0] : data.message
+        toast.error(message || data.error || '注册失败')
       } else {
         toast.success('注册成功！正在跳转到登录页面...')
         // 2秒后跳转到登录页

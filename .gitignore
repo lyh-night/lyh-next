@@ -45,7 +45,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/apps/frontend/src/generated/prisma
+/apps/backend/src/generated/prisma
 
 .mimocode/
 .pnpm-store/

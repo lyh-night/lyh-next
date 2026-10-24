@@ -1,7 +1,14 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["DATABASE_URL", "NEXTAUTH_URL", "NEXTAUTH_SECRET", "NEXT_PUBLIC_APP_NAME"],
+  "globalEnv": [
+    "DATABASE_URL",
+    "NEXTAUTH_URL",
+    "NEXTAUTH_SECRET",
+    "NEXT_PUBLIC_APP_NAME",
+    "NEXT_PUBLIC_API_URL",
+    "BACKEND_URL"
+  ],
   "globalDependencies": [
     "tsconfig.base.json",
     "eslint.config.js",

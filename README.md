@@ -38,34 +38,48 @@ pnpm install
 
 ### 2. 配置环境变量
 
-复制示例文件并填写配置（`.env` 位于应用包内，Next 与 Prisma CLI 都从这里读取）：
+前端与后端各自维护 `.env`：
 
 ```bash
-cp apps/frontend/.env.example apps/frontend/.env
+cp apps/frontend/.env.example apps/frontend/.env   # NextAuth 与后端地址
+cp apps/backend/.env.example apps/backend/.env     # 数据库与后端配置
 ```
 
-`.env` 文件各字段说明：
+`apps/frontend/.env`：
 
 ```bash
-# ── 数据库 ──────────────────────────────────────────────
-# 使用 Docker 容器时，保持默认即可（连接本地 6432 端口）
-# 格式：postgresql://用户名:密码@主机:端口/数据库名
-DATABASE_URL="postgresql://postgres:postgres@localhost:6432/lyh-next-db"
-
-# ── NextAuth ────────────────────────────────────────────
 # 应用访问地址，生产环境改为实际域名
 NEXTAUTH_URL="http://localhost:3000"
 
-# 会话加密密钥，用于签名 JWT 和加密敏感信息
-# 生产环境务必替换为强随机字符串（可用 `openssl rand -base64 32` 生成）
+# 会话加密密钥，生产环境务必替换为强随机字符串（`openssl rand -base64 32`）
 NEXTAUTH_SECRET="your-secret-key-here"
+
+# 后端 API：浏览器侧请求与 NextAuth 服务端校验
+NEXT_PUBLIC_API_URL="http://localhost:3001"
+BACKEND_URL="http://localhost:3001"
 ```
 
-| 字段              | 必填 | 说明                           |
-| ----------------- | ---- | ------------------------------ |
-| `DATABASE_URL`    | 是   | PostgreSQL 连接字符串          |
-| `NEXTAUTH_URL`    | 是   | 应用访问地址                   |
-| `NEXTAUTH_SECRET` | 是   | 会话加密密钥，生产环境必须替换 |
+`apps/backend/.env`：
+
+```bash
+PORT=3001
+NODE_ENV=development
+CORS_ORIGINS=http://localhost:3000
+# 使用 Docker 容器时保持默认（本地 6432 端口）
+DATABASE_URL="postgresql://postgres:postgres@localhost:6432/lyh-next-db"
+```
+
+| 字段                  | 所属 | 必填 | 说明                  |
+| --------------------- | ---- | ---- | --------------------- |
+| `DATABASE_URL`        | 后端 | 是   | PostgreSQL 连接字符串 |
+| `PORT`                | 后端 | 否   | 默认 `3001`           |
+| `CORS_ORIGINS`        | 后端 | 否   | 允许的前端来源        |
+| `NEXTAUTH_URL`        | 前端 | 是   | 应用访问地址          |
+| `NEXTAUTH_SECRET`     | 前端 | 是   | 会话加密密钥          |
+| `NEXT_PUBLIC_API_URL` | 前端 | 否   | 浏览器访问后端的地址  |
+| `BACKEND_URL`         | 前端 | 否   | 服务端访问后端的地址  |
+
+> 数据库 schema、Prisma Client 与 `db:push` / `db:studio` 都在 `apps/backend`；前端不直连数据库。
 
 ### 3. 启动数据库
 
@@ -158,28 +172,39 @@ docker compose down        # 保留数据
 docker compose down -v     # 删除数据卷
 ```
 
-### 仅部署应用
+### 仅部署应用 / 后端
 
-如使用外部数据库，可单独构建应用镜像：
+如使用外部数据库，可分别构建两个镜像：
 
 ```bash
+# 前端
 docker build -t lyh-next:latest .
 docker run -d --name lyh-next -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:pass@<db-host>:5432/lyh-next-db" \
+  -e BACKEND_URL="http://<backend-host>:3001" \
   -e NEXTAUTH_URL="http://your-domain.com" \
   -e NEXTAUTH_SECRET="your-strong-secret" \
   lyh-next:latest
+
+# 后端（构建上下文为仓库根）
+docker build -f apps/backend/Dockerfile -t lyh-next-backend .
+docker run -d --name lyh-next-backend -p 3001:3001 \
+  -e DATABASE_URL="postgresql://user:pass@<db-host>:5432/lyh-next-db" \
+  -e CORS_ORIGINS="http://your-domain.com" \
+  lyh-next-backend
 ```
 
 ### 环境变量对照表
 
 以下为 Docker Compose 中使用的环境变量（与 `.env` 字段对应，仅全栈部署时生效）：
 
-| Docker 环境变量    | 默认值                                               | 说明                     |
-| ------------------ | ---------------------------------------------------- | ------------------------ |
-| `APP_DATABASE_URL` | `postgresql://postgres:postgres@db:5432/lyh-next-db` | 容器内连接，一般无需修改 |
-| `NEXTAUTH_URL`     | `http://localhost:3000`                              | 改为实际域名             |
-| `NEXTAUTH_SECRET`  | `please-change-this-secret`                          | 必须替换为强随机字符串   |
+| Docker 环境变量       | 默认值                                               | 说明                         |
+| --------------------- | ---------------------------------------------------- | ---------------------------- |
+| `APP_DATABASE_URL`    | `postgresql://postgres:postgres@db:5432/lyh-next-db` | backend 连接数据库（容器内） |
+| `CORS_ORIGINS`        | `http://localhost:3000`                              | backend 允许的前端来源       |
+| `NEXTAUTH_URL`        | `http://localhost:3000`                              | 改为实际域名                 |
+| `NEXTAUTH_SECRET`     | `please-change-this-secret`                          | 必须替换为强随机字符串       |
+| `BACKEND_URL`         | `http://backend:3001`                                | 前端服务端访问 backend       |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:3001`                              | 浏览器访问 backend           |
 
 ## 代码规范
 
@@ -198,16 +223,18 @@ apps/
 │   ├── src/
 │   │   ├── app/               # App Router 页面与页面内业务组件
 │   │   ├── provider/          # NextAuth Provider
-│   │   ├── server/            # auth.ts / prisma.ts
+│   │   ├── server/            # auth.ts（NextAuth 会话）
 │   │   ├── styles/            # Tailwind 入口与业务样式
-│   │   ├── utils/             # 仅应用内使用的工具（clipboard）
-│   │   ├── generated/         # Prisma 生成的客户端（勿手改）
+│   │   ├── utils/             # 应用内工具（clipboard / api 地址）
 │   │   └── middleware.ts
-│   ├── prisma/schema.prisma    # 数据库模型定义
 │   ├── public/                 # 静态资源
-│   ├── .env                    # 环境变量
+│   ├── .env                    # NextAuth 与后端地址
 │   └── next.config.ts
 └── backend/                   # @lyh-next/backend —— NestJS 服务
+    ├── prisma/schema.prisma   # 数据库模型（唯一归属）
+    ├── src/                   # auth / health / prisma / common
+    ├── .env                   # DATABASE_URL / PORT / CORS_ORIGINS
+    └── Dockerfile
 packages/
 ├── components/                # @lyh-next/components —— shadcn/ui 组件库（源码包）
 │   └── src/
