@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint'
 import prettierConfig from 'eslint-config-prettier'
 import prettierPlugin from 'eslint-plugin-prettier'
 import nextPlugin from '@next/eslint-plugin-next'
+import globals from 'globals'
 
 export default [
   // 全局忽略（生成物与构建产物不参与 lint）
@@ -22,6 +23,16 @@ export default [
 
   // TS 推荐规则
   ...tseslint.configs.recommended,
+
+  // Node 脚本与根配置文件运行在 Node 环境（console / process 等全局）
+  {
+    files: ['scripts/**/*.{js,mjs,cjs}', '*.config.{js,mjs,cjs}'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: globals.node,
+    },
+  },
 
   // Next.js 插件注册（规则仅作用于应用包，避免对 packages 施加 App Router 规则）
   {

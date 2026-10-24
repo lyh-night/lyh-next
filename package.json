@@ -14,14 +14,15 @@
     "dev:backend": "pnpm --filter @lyh-next/backend run dev",
     "start": "pnpm --filter @lyh-next/frontend run start",
     "start:backend": "pnpm --filter @lyh-next/backend run start",
-    "lint": "turbo run lint",
+    "lint": "turbo run lint && eslint scripts *.config.js",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "generate": "pnpm --filter @lyh-next/backend run generate",
     "db:push": "pnpm --filter @lyh-next/backend run db:push",
     "db:studio": "pnpm --filter @lyh-next/backend run db:studio",
     "prepare": "husky",
-    "postinstall": "node scripts/generate-prisma.mjs"
+    "postinstall": "node scripts/generate-prisma.mjs",
+    "lint:root": "eslint scripts *.config.js"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -40,6 +41,7 @@
     "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^17.13.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.5",
     "prettier": "^3.6.2",
