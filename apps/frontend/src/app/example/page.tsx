@@ -49,7 +49,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@lyh-next/components'
-import ThemeSwitch from '@/app/components/ThemeSwitch'
+import ThemeSwitch from '@/components/ThemeSwitch'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

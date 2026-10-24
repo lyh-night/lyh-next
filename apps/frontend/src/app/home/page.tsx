@@ -1,4 +1,4 @@
-import Header from '@/app/components/header/index'
+import Header from '@/components/header/index'
 
 export default function HomePage() {
   return (

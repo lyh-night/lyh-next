@@ -5,7 +5,7 @@ import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import ThemeSwitch from '@/app/components/ThemeSwitch'
+import ThemeSwitch from '@/components/ThemeSwitch'
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
