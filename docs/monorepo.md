@@ -47,18 +47,16 @@
 ```
 lyh-next/
 ├─ apps/
-│  └─ frontend/                         # @lyh-next/frontend（应用，private）
+│  ├─ frontend/                         # @lyh-next/frontend（应用，private）
 │     ├─ src/
 │     │  ├─ app/                        # 页面 + app 内业务组件（原 src/app 原样搬入）
 │     │  │  ├─ api/ auth/ home/ workflow/ example/
 │     │  │  └─ components/              # header / ThemeSwitch / workflow（不包化）
 │     │  ├─ provider/                   # NextAuthProvider
-│     │  ├─ server/                     # auth.ts / prisma.ts
+│     │  ├─ server/                     # auth.ts（NextAuth 会话配置）
 │     │  ├─ styles/                     # index/variable/shadcn/custom.css（全局样式唯一来源）
-│     │  ├─ utils/                      # clipboard.ts（留在应用内）
-│     │  ├─ generated/prisma/           # 生成物，gitignore
+│     │  ├─ utils/                      # clipboard.ts / api.ts（后端地址）
 │     │  └─ middleware.ts
-│     ├─ prisma/schema.prisma
 │     ├─ public/
 │     ├─ components.json                # shadcn CLI 配置（迁入）
 │     ├─ next.config.ts
@@ -66,6 +64,24 @@ lyh-next/
 │     ├─ postcss.config.js
 │     ├─ tsconfig.json
 │     ├─ .env / .env.example
+│     └─ package.json
+│  └─ backend/                          # @lyh-next/backend（NestJS，private）
+│     ├─ src/
+│     │  ├─ main.ts                     # 全局前缀 /api、校验、CORS、Swagger、优雅关闭
+│     │  ├─ app.module.ts               # ConfigModule + PrismaModule + HealthModule + AuthModule
+│     │  ├─ app.controller.ts/service.ts
+│     │  ├─ auth/                       # /api/auth/register、/api/auth/verify-credentials
+│     │  ├─ health/                     # GET /api/health
+│     │  ├─ prisma/                     # PrismaService（生命周期托管）
+│     │  ├─ generated/prisma/           # Prisma Client 生成物，gitignore
+│     │  └─ common/{filters,interceptors}/
+│     ├─ prisma/schema.prisma           # 数据库模型（唯一归属）
+│     ├─ prisma.config.ts
+│     ├─ dist/                          # 构建产物，gitignore
+│     ├─ .env / .env.example            # DATABASE_URL / PORT / CORS_ORIGINS
+│     ├─ Dockerfile
+│     ├─ nest-cli.json
+│     ├─ tsconfig.json / tsconfig.build.json
 │     └─ package.json
 ├─ packages/
 │  ├─ utils/                            # @lyh-next/utils（private，tsdown 构建）
@@ -75,7 +91,9 @@ lyh-next/
 │  │  ├─ tsconfig.json
 │  │  └─ package.json
 │  └─ components/                       # @lyh-next/components（private，源码包）
-│     ├─ src/{shadcn/,tooltip/,popover/,portal-to-follow-elem/}
+│     ├─ src/index.ts                   # 统一出口
+│     ├─ src/shadcn/                    # 组件实现（同功能只留 shadcn）
+│     ├─ src/styles/index.css           # 组件库基础样式
 │     ├─ tsconfig.json
 │     └─ package.json
 ├─ docs/                                # 文档留在根
@@ -245,15 +263,14 @@ export default defineConfig({
 ```
 packages/components/
 ├─ src/
-│  ├─ shadcn/                  # 15 个文件，原样迁入
-│  ├─ tooltip/                 # index.tsx / content.tsx / TooltipManager.ts
-│  ├─ popover/index.tsx
-│  └─ portal-to-follow-elem/index.tsx
+│  ├─ index.ts                 # 统一出口（barrel）
+│  ├─ shadcn/                  # 15 个 shadcn/ui 组件
+│  └─ styles/index.css         # 组件库基础样式（主题变量 + dark 变体 + @theme 映射）
 ├─ tsconfig.json
 └─ package.json
 ```
 
-**package.json（草案）**
+**package.json**
 
 ```json
 {
@@ -261,13 +278,11 @@ packages/components/
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": ["**/*.css"],
   "exports": {
-    "./shadcn/*": "./src/shadcn/*.tsx",
-    "./tooltip": "./src/tooltip/index.tsx",
-    "./tooltip/*": "./src/tooltip/*.tsx",
-    "./popover": "./src/popover/index.tsx",
-    "./portal-to-follow-elem": "./src/portal-to-follow-elem/index.tsx"
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles/index.css",
+    "./shadcn/*": "./src/shadcn/*.tsx"
   },
   "scripts": {
     "lint": "eslint .",
@@ -278,8 +293,6 @@ packages/components/
     "react-dom": "^19.0.0"
   },
   "dependencies": {
-    "@floating-ui/react": "^0.26.25",
-    "@headlessui/react": "^2.2.8",
     "@lyh-next/utils": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -290,30 +303,33 @@ packages/components/
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@remixicon/react": "^4.6.0",
-    "ahooks": "^3.8.4",
     "class-variance-authority": "^0.7.1",
     "lucide-react": "^0.562.0",
     "next-themes": "^0.4.6",
-    "react-hook-form": "^7.71.1",
+    "react-hook-form": "catalog:",
     "sonner": "^2.0.7"
   },
   "devDependencies": {
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "eslint": "^9.33.0",
-    "typescript": "^5.9.2"
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:"
   }
 }
 ```
 
 **导出策略（关键决策）**
 
-- **不提供 barrel `index` 入口**：20 个文件里 13 个是 client 组件，barrel 会把整包拖进依赖图，破坏按需加载与 `'use client'` 边界。统一用子路径导入：`@lyh-next/components/shadcn/button`。
-- `exports` 的 `./shadcn/*` 模式映射到 `src/shadcn/*.tsx`，与现有目录结构一一对应，迁移时应用侧只改前缀。
-- 无 `build` 脚本（源码包）。turbo `build` 只作用于 `utils` 与 `frontend`；turbo 允许某个包缺少某任务，缺失即跳过。
+- **统一出口**：消费方一律 `import { Button, Tooltip } from '@lyh-next/components'`，不再散落 `./shadcn/xxx` 子路径。`import` 心智负担小，重构（组件换实现/改名）只改包内。
+- 保留 `./shadcn/*` 单一通配导出**仅为 shadcn CLI 兼容**（`pnpm dlx shadcn add` 生成的文件路径与内部相对引用），业务代码不应使用。
+- `sideEffects` 声明为 `["**/*.css"]`：JS 可被完全 tree-shake，但 CSS 副作用必须保留，否则打包器会误删样式。
+- 包内**只保留 shadcn/ui 版本**：同一功能的组件不维护两套。原 `tooltip/`、`popover/`、`portal-to-follow-elem/`（基于 `@floating-ui/react` + `@headlessui/react` 的自研浮层）与 shadcn 的 Tooltip/Popover 功能重复，已删除，应用侧 3 处调用迁移到 `Tooltip/TooltipTrigger/TooltipContent`。
+- 删除重复组件后，`@floating-ui/react`、`@headlessui/react`、`@remixicon/react`、`ahooks` 不再被包内使用，已从 `dependencies` 移除（应用侧仍在用，保留在 app 的依赖里）。
+- 无 `build` 脚本（源码包）。turbo `build` 只作用于 `utils`、`frontend` 与 `backend`；turbo 允许某个包缺少某任务，缺失即跳过。
 
-**包内引用改造（仅 3 类）**
+**包内引用改造（仅 2 类）**
 
 | 现状                                                    | 改为                                   | 处数 |
 | ------------------------------------------------------- | -------------------------------------- | ---- |
@@ -321,15 +337,20 @@ packages/components/
 | `from '@/components/shadcn/button'`（`pagination.tsx`） | `from './button'`                      | 1    |
 | `from '@/components/shadcn/label'`（`form.tsx`）        | `from './label'`                       | 1    |
 
-> `tooltip/index.tsx` 里的 `'../portal-to-follow-elem'` 已是相对路径，无需修改。
+**样式契约**
 
-**样式契约（必须写进代码评审规范）**
+- `src/styles/index.css` 是组件库的基础样式层，只包含：`@custom-variant dark`、`html[data-theme]` 下的设计变量、`@theme inline` 映射。
+- 包内**不得** `@import 'tailwindcss'`、不得引入 Tailwind 入口，也不得写业务样式；由宿主应用在 Tailwind 入口按顺序引入：
 
-- 包内**不得**引入任何全局 CSS、不得定义主题变量、不得 `@import 'tailwindcss'`。
-- 组件只消费 app 注入的主题 token（`bg-primary`、`text-muted-foreground`、`border-input` 等），token 定义唯一来源是 `apps/frontend/src/styles/shadcn.css` 与 `variable.css`。
-- 若将来需要包级 CSS，必须走「app 侧 `@source` 或 `@import` 显式引入」，不允许包内隐式注入。
+  ```css
+  @import 'tailwindcss';
+  @import '@lyh-next/components/styles.css';
+  ```
 
-**tsconfig 要点**：extends 根 `tsconfig.base.json`，`include: ["src"]`，`jsx` 覆盖为 `"react-jsx"`（仅类型校验，不需要 `preserve`）。
+- 应用私有的设计变量（如 workflow 调色板 `variable.css`）与私有 class（`custom.css`）仍留在 `apps/frontend/src/styles/`。
+- 组件源码仍需被 Tailwind 扫描：应用入口用 `@source '../../../../packages/components/src/**/*.{ts,tsx}'` 显式纳入。
+
+**tsconfig 要点**：extends 根 `tsconfig.base.json`，`include: ["src"]`，`jsx` 覆盖为 `"react-jsx"`（仅类型校验，不需要 `preserve`）。根 base 不开启 `incremental`，避免各包把 `.tsbuildinfo` 写进包目录或共用同一缓存文件；增量收益由 turbo 的 `typecheck` 缓存提供。
 
 ### 5.3 `@lyh-next/frontend`
 
@@ -603,14 +624,14 @@ allowBuilds:
   - 新增 ignores：`**/.next/**`、`**/dist/**`、`**/src/generated/**`、`**/node_modules/**`。
 - 应用 `lint` 由 `next lint` 改为 `eslint .`：`next lint` 的扫描根固定为应用目录且 Next 15 已将其标记为弃用路线，统一用 `eslint .` 让包与应用的 lint 行为一致。
 - `prettier.config.js` 留在根，`format` 只在根跑一次（`prettier --write .`），不放进 turbo 任务，避免多包并行写文件。**必须显式配置 `tailwindStylesheet: './apps/frontend/src/styles/index.css'`**：否则 `prettier-plugin-tailwindcss` 在根目录找不到 Tailwind 入口，会回退到默认排序，导致全仓类名排序与既有代码不一致（实施时出现 28 个文件的排序差异）。
-- `apps/frontend/components.json`：`css` 仍为 `src/styles/shadcn.css`；aliases 改为
+- `apps/frontend/components.json`：`css` 改为 `../../packages/components/src/styles/index.css`（主题变量归属组件库）；aliases 改为
   - `components` → `@lyh-next/components/shadcn`
   - `ui` → `@lyh-next/components/shadcn`
   - `utils` → `@lyh-next/utils`
   - `lib` → `@lyh-next/utils`
   - `hooks` → `@/hooks`
 
-  这依赖 §5.3 中 app tsconfig 的 `@lyh-next/components/*` paths 映射，shadcn CLI 才能把新组件写进 `packages/components/src/shadcn/`。
+  这依赖 §5.3 中 app tsconfig 的 `@lyh-next/components/*` paths 映射，shadcn CLI 才能把新组件写进 `packages/components/src/shadcn/`。CLI 新增组件后，需手动在 `packages/components/src/index.ts` 补一行 `export * from './shadcn/<name>'`，业务侧才能从统一出口导入。
 
 ### 8.6 `.gitignore`（增补）
 
@@ -636,19 +657,23 @@ Tailwind CSS 4 通过扫描源码提取 class。组件搬到 `packages/component
 ```css
 @import 'tailwindcss';
 @import 'tw-animate-css';
+/* 组件库基础样式：主题变量、dark 变体与 Tailwind 主题映射都收敛在包内 */
+@import '@lyh-next/components/styles.css';
 
 /* 组件包源码必须显式纳入扫描，否则组件类会被裁掉 */
 @source '../../../../packages/components/src/**/*.{ts,tsx}';
 
 @import './variable.css';
 @import './custom.css';
-@import './shadcn.css';
 ```
 
 - 路径以**该 CSS 文件所在目录**为基准：`src/styles/` → 上四层回到仓库根 → `packages/components/src`。
 - `@source` 必须放在依赖包已存在之后生效（迁移顺序：先搬包，再改 CSS）。
-- 主题变量 `--color-*` 仍由 app 的 `shadcn.css` / `variable.css` 通过 `html[data-theme]` 注入，`@theme inline` 桥接保持不变；组件包只引用 token，不定义 token。
-- `dark` 变体基于 `html[data-theme='dark']`（`@custom-variant dark`），属应用级约定，包内不得自行改写。
+- 主题变量分两层：
+  - **组件库层**（包内 `styles/index.css`）：`--radius`、`--color-primary` 等 shadcn token 与 `@theme inline` 映射，属于组件的公共契约；
+  - **应用层**（app 的 `variable.css`）：workflow 调色板等业务 token。
+  - `dark` 变体基于 `html[data-theme='dark']`（`@custom-variant dark`），由组件库统一定义，应用只负责在 `<html>` 上设置 `data-theme`。
+- 包内 CSS 通过 `exports["./styles.css"]` 暴露，Tailwind 的 `@import` 解析走包的 exports（与 `@import 'tailwindcss'` 同一套解析）。
 - 若将来 components 改为编译产物（`dist`），`@source` 必须同步指向 `dist`，且 `exports`、`transpilePackages` 三处联动修改——这是 §5.2 选择源码包的另一个理由。
 
 ---
@@ -908,6 +933,169 @@ CMD ["node", "apps/frontend/server.js"]
 - **未跑 `docker build`**：实施环境无 docker daemon。替代验证：按 Dockerfile 的 runner 布局把 `static`、`public` 拷到 `apps/frontend/.next/standalone/apps/frontend/` 下，直接执行 `node apps/frontend/.next/standalone/apps/frontend/server.js`：`/auth/login` 返回 200、`/home` 307 到登录页、CSS 与 favicon 均 200，且 CSS 内含组件包独有类名。仍需在具备 Docker 的机器上跑一次 `docker compose up -d --build` 做最终确认。
 - `pnpm db:push` 未实测（本地未启动 PostgreSQL 容器）；已用 `prisma validate` 验证 `prisma.config.ts` 与 `.env` 在应用目录下正确加载，`prisma generate` 在 `pnpm install` 的 postinstall 中成功执行。
 - `pnpm dev` 已验证路由与中间件行为，未做逐页视觉回归（样式正确性以产物 CSS 中组件包类名存在为证据）。
+
+### 18.5 第二轮优化（组件包收敛）
+
+| 项         | 调整                                                                                                              | 结果                                                                                                                                                            |
+| ---------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 导出方式   | 子路径导出（6 个 `exports` 键）→ 统一出口 `@lyh-next/components`                                                  | 应用侧 29 处导入合并为 11 处；包内仅保留 `./shadcn/*` 通配供 CLI 使用                                                                                           |
+| 样式包     | 新增 `packages/components/src/styles/index.css`，`exports["./styles.css"]` 暴露                                   | 主题变量 / `@custom-variant dark` / `@theme inline` 从 app 迁入包内；app 入口改为 `@import '@lyh-next/components/styles.css'`，删除 `src/styles/shadcn.css`     |
+| 组件去重   | 删除 `tooltip/`、`popover/`、`portal-to-follow-elem/`（与 shadcn Tooltip/Popover 重复）                           | 应用 3 处调用迁移到 `Tooltip` + `TooltipTrigger asChild` + `TooltipContent`；包依赖移除 `@floating-ui/react`、`@headlessui/react`、`@remixicon/react`、`ahooks` |
+| 版本一致   | `pnpm-workspace.yaml` 增加 `catalog`，react / react-dom / 类型包 / react-hook-form / typescript 统一用 `catalog:` | `pnpm install` 后仅 1 个 react@19.1.0、1 个 react-hook-form@7.90.0，无 19.3.1 残留                                                                              |
+| 构建产物   | `/example` First Load JS 15.5 kB → 5.61 kB，`/workflow` 98.5 kB → 90.3 kB                                         | 去重与 tree-shake 生效                                                                                                                                          |
+| 增量编译   | 移除 `tsconfig.base.json` 的 `incremental`                                                                        | 不再产生 `packages/components/tsconfig.tsbuildinfo`；typecheck 增量收益由 turbo 缓存承担                                                                        |
+| 缓存正确性 | `turbo.json` 增加 `globalDependencies`（tsconfig.base / eslint / prettier / lockfile）                            | 改根配置会正确失效缓存；连续两次 build 恢复 `FULL TURBO`                                                                                                        |
+
+> 关于 `tsconfig.tsbuildinfo`：它是 TypeScript 增量编译的缓存文件（记录上次编译的文件指纹与诊断信息），由 `incremental: true` 触发生成，可安全删除。此前它出现在 `packages/components/` 下，是因为 `tsc --noEmit` 默认把缓存写到 tsconfig 同目录；该文件被 `.gitignore` 的 `**/*.tsbuildinfo` 覆盖，不进入版本库。
+
+---
+
+## 十九、`apps/backend` 基础设施（NestJS）
+
+### 19.1 定位
+
+`@lyh-next/backend` 是独立的后端服务包（NestJS 12 + Express），与前端通过 HTTP 通信，不依赖 `packages/*`。
+采用**独立的 tsconfig**（`module: nodenext` + 装饰器 + 真实 emit），不 extends `tsconfig.base.json`（base 面向 bundler + `noEmit`，两者编译模型不同）。
+
+### 19.2 脚本
+
+```json
+{
+  "dev": "nest start --watch",
+  "build": "nest build",
+  "start": "node dist/main.js",
+  "start:prod": "node dist/main.js",
+  "start:debug": "nest start --debug --watch",
+  "lint": "eslint src",
+  "typecheck": "tsc --noEmit -p tsconfig.json",
+  "format": "prettier --write \"src/**/*.ts\""
+}
+```
+
+- `dev` 供 turbo 的 persistent 任务识别；`pnpm dev` 会同时拉起 frontend(3000)、backend(3001) 与 utils watch。
+- **无 `test` 脚本**，仓库不引入测试框架（同步移除了 vitest / supertest / @nestjs/testing 及其配置）。
+
+### 19.3 运行时基础设施
+
+| 能力     | 实现                                                                                                              | 位置                   |
+| -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 配置     | `@nestjs/config`，`isGlobal`、`cache`，env 优先级 `.env.local` → `.env`                                           | `app.module.ts`        |
+| 全局前缀 | `app.setGlobalPrefix('api')`                                                                                      | `main.ts`              |
+| 参数校验 | 全局 `ValidationPipe`（`whitelist` + `transform` + `forbidNonWhitelisted`）                                       | `main.ts`              |
+| CORS     | `CORS_ORIGINS` 逗号分隔，默认 `http://localhost:3000`，`credentials: true`                                        | `main.ts`              |
+| 错误结构 | 全局 `HttpExceptionFilter`：`{ statusCode, message, error, path, timestamp }`，非 `HttpException` 按 500 记录堆栈 | `common/filters/`      |
+| 访问日志 | 全局 `LoggingInterceptor`：`METHOD path status 耗时ms`                                                            | `common/interceptors/` |
+| 健康检查 | `GET /api/health` → `{ status, uptime, timestamp, version }`                                                      | `health/`              |
+| 服务信息 | `GET /api` → `{ name, version, environment }`                                                                     | `app.controller.ts`    |
+| API 文档 | `@nestjs/swagger`，`GET /api/docs`，`addBearerAuth()` 预置                                                        | `main.ts`              |
+| 优雅关闭 | `app.enableShutdownHooks()`，响应 `SIGTERM`                                                                       | `main.ts`              |
+
+### 19.4 端口与路由约定
+
+- 后端 **3001**（前端占用 3000），可用 `PORT` 覆盖。
+- 所有路由带 `/api` 前缀；文档固定 `/api/docs`（`SwaggerModule.setup` 的路径是绝对路径，不受全局前缀影响）。
+
+### 19.5 环境变量
+
+`.env.example`（不入库 `.env`，代码全部有默认值）：
+
+```bash
+PORT=3001
+NODE_ENV=development
+CORS_ORIGINS=http://localhost:3000
+```
+
+### 19.6 与 workspace 的对齐
+
+- 删除脚手架自带的 `package-lock.json`，依赖统一由 pnpm lockfile 管理。
+- 删除包内 `.gitignore`（根已覆盖 `node_modules/`、`**/dist/`、`*.tsbuildinfo`、`.env`）。
+- 关闭 `incremental`，`nest build` 不再在包根留下 `tsconfig.build.tsbuildinfo`；增量收益交给 turbo 缓存。
+- lint 统一为根 ESLint flat config（移除 `oxlint`），并去掉源码分号以符合根 Prettier 配置。
+- 移除 `@nestjs/observe`（需 appKey/appSecret 的 SaaS 观测）与 `@nestjs/mau` + `nest deploy`（托管部署）。
+- TypeScript 保持 `^6.0.2`：`@nestjs/schematics@12` 按 TS 6 解析，**不并入 catalog**（catalog 里是 5.9，供前端/packages 使用），属于已知的版本差异。
+- `@scarf/scarf`（Swagger UI 的匿名统计脚本）在 `allowBuilds` 中显式禁止执行。
+
+### 19.7 Docker
+
+`apps/backend/Dockerfile`（构建上下文为仓库根）：
+
+- `deps` / `prod-deps`：只复制根清单 + 四个 `package.json`，分别安装全量依赖与 `--prod` 依赖；
+- `builder`：`pnpm --filter @lyh-next/backend build`；
+- `runner`：`node:22-alpine`，非 root，`CMD ["node","dist/main.js"]`，`EXPOSE 3001`。
+
+`docker-compose.yml` 新增 `backend` 服务（`3001:3001`，`CORS_ORIGINS` 可覆盖）。
+
+### 19.8 未验证项
+
+- Docker 镜像未实跑（环境无 docker daemon）；Dockerfile 的路径已与 `nest build` 产物（`dist/main.js`）对齐。
+- `pnpm dev` 双端并行只验证了 turbo 任务编排（backend 的 `dev` 为 watch 模式，单独启动已验证）。
+
+---
+
+## 二十、数据与认证迁移至 backend
+
+> 目标：把数据库与认证的归属从 `apps/frontend` 收敛到 `apps/backend`，前端只做 UI 与会话。
+
+### 20.1 迁移映射
+
+| 原位置                                             | 新位置                                                | 说明                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
+| `apps/frontend/prisma/schema.prisma`               | `apps/backend/prisma/schema.prisma`                   | generator 输出仍为 `../src/generated/prisma`（现在指向 backend）        |
+| `apps/frontend/prisma.config.ts`                   | `apps/backend/prisma.config.ts`                       | `schema` / `migrations` 路径不变，相对 backend 目录                     |
+| `apps/frontend/src/server/prisma.ts`               | `apps/backend/src/prisma/prisma.service.ts`           | 改为 Nest `@Injectable()`，由 `PrismaModule`（`@Global`）托管连接与断开 |
+| `apps/frontend/src/generated/prisma`               | `apps/backend/src/generated/prisma`                   | 生成物，已从 git 与镜像中移除                                           |
+| `apps/frontend/src/app/api/auth/register/route.ts` | `apps/backend/src/auth/`（`POST /api/auth/register`） | 改用 DTO 校验 + 统一异常结构                                            |
+| `apps/frontend/src/server/auth.ts` 中的 DB 访问    | `POST /api/auth/verify-credentials`                   | NextAuth 的 `authorize()` 改为 fetch 后端                               |
+
+### 20.2 认证边界（方案 A）
+
+```text
+浏览器 ──signIn('credentials')──▶ Next.js /api/auth/*(NextAuth, JWT 会话)
+                                      │ 服务端 fetch
+                                      ▼
+                          NestJS POST /api/auth/verify-credentials
+                                      │
+                                      ▼
+                                   PostgreSQL
+```
+
+- **NextAuth 仍留在前端**：`middleware.ts` 的 `getToken`、`signIn`/`signOut`、`SessionProvider` 都依赖它，迁走需要重做 cookie 域与中间件鉴权。
+- 前端已删除 `PrismaAdapter`（JWT 策略下无必要）、`signIn` 中的 Google 分支（该 provider 从未注册）与 `jwt` 回调里的 `trigger === 'update'` 数据库查询。
+- 注册接口改为浏览器直连后端，前端通过 `src/utils/api.ts` 的 `apiUrl()` 拼接 `NEXT_PUBLIC_API_URL`。
+- `authorize()` 使用 `BACKEND_URL`（服务端地址，Docker 内为 `http://backend:3001`）；网络异常按登录失败处理（返回 `null`），不把异常抛给 NextAuth。
+
+### 20.3 接口一览
+
+| 方法 | 路径                           | 用途                                    |
+| ---- | ------------------------------ | --------------------------------------- |
+| GET  | `/api`                         | 服务信息                                |
+| GET  | `/api/health`                  | 健康检查                                |
+| GET  | `/api/docs`                    | Swagger                                 |
+| POST | `/api/auth/register`           | 注册（201；邮箱重复 409；参数非法 400） |
+| POST | `/api/auth/verify-credentials` | 凭据校验（200 返回用户档案；失败 401）  |
+
+### 20.4 依赖与环境变量归属
+
+- 后端新增：`@prisma/client`、`@prisma/adapter-pg`、`pg`、`bcryptjs`、`dotenv`，devDependencies 增加 `prisma`。
+- 前端移除：上述全部，以及 `@auth/prisma-adapter`；`generate` / `db:push` / `db:studio` 脚本同步迁到后端。
+- 根脚本 `generate` / `db:push` / `db:studio` 改为 `pnpm --filter @lyh-next/backend`。
+- 根 `postinstall` 改为 `node scripts/generate-prisma.mjs`：schema 或 prisma CLI 不存在时跳过（供 Docker 的 deps/`--prod` 阶段复用）。
+- `DATABASE_URL` 移入 `apps/backend/.env`；前端仅保留 `NEXTAUTH_*`、`NEXT_PUBLIC_API_URL`、`BACKEND_URL`。
+
+### 20.5 验证记录
+
+| 项                                  | 结果                                                                                                                   |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `pnpm db:push`（backend）           | `The database is already in sync with the Prisma schema`                                                               |
+| `POST /api/auth/register`           | 201 创建用户；重复邮箱 409 `该邮箱已被注册`；密码 < 6 位 400                                                           |
+| `POST /api/auth/verify-credentials` | 正确 200（含 `hasAccess`/`role`）；错误 401                                                                            |
+| NextAuth 登录链路                   | 取 CSRF → `POST /api/auth/callback/credentials` 302 → `/api/auth/session` 返回带 `role`/`isAdmin` 的会话 → `/home` 200 |
+| 依赖隔离                            | 前端 `pnpm why @prisma/client` 为空                                                                                    |
+| `pnpm build`                        | 3/3，二次 `FULL TURBO`                                                                                                 |
+
+### 20.6 附带修复
+
+- `NextAuth` 增加 `trustHost: true`：自托管/Docker 下没有 Vercel 的可信 Host 推断，缺失时会报 `UntrustedHost`（本轮在生产构建验证时暴露）。
 
 ---
 

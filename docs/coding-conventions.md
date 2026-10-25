@@ -29,6 +29,27 @@ Zod Schema 应作为类型来源。
 
 优先复用已有组件。
 
+### 全局样式的层（layer）
+
+自定义基础样式必须写在 `@layer base` 里：
+
+```css
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+}
+```
+
+原因：Tailwind v4 把工具类放在 `@layer utilities`，而**未分层（unlayered）的声明优先级高于任何 layer**。在 `index.css` 里直接写 `div { color: ... }` 会盖掉 `text-*` 工具类（曾导致 Tooltip 文字颜色失效）。
+
+约定：
+
+- 默认文字色 / 背景色挂在 `body` 上，靠继承生效，不要写死在 `div` 上
+- 未指定颜色的边框用 `*, ::after, ::before { border-color: var(--color-border) }` 兜底
+- 主题变量只由 `@lyh-next/components` 的 `styles.css` 提供，app 内不重复定义
+
 ---
 
 ## 三、命名规范

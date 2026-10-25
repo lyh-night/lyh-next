@@ -1,0 +1,73 @@
+// AI 对话相关模型：多文件 schema 中的一部分（由 prisma.config.ts 的 schema 目录合并）
+// 约定：generator 与 datasource 留在 schema.prisma，这里只放业务模型。
+
+enum ChatRole {
+  system
+  user
+  assistant
+}
+
+enum ChatMessageStatus {
+  streaming
+  completed
+  aborted
+  error
+}
+
+/// 一行 = 一套可选的第三方模型配置（由用户手动写库）
+model AiModel {
+  id          String   @id @default(cuid())
+  displayName String
+  /// 传给上游的 model 字段，如 deepseek-chat
+  model       String
+  /// OpenAI 兼容地址，如 https://api.deepseek.com/v1
+  baseUrl     String
+  /// 第三方平台密钥，永不出现在任何接口响应与日志中
+  apiKey      String
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  temperature Float?
+  maxTokens   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  conversations Conversation[]
+  messages      ChatMessage[]
+
+  @@index([isActive, sortOrder])
+}
+
+/// 一个会话（多轮对话的容器）
+model Conversation {
+  id           String   @id @default(cuid())
+  title        String   @default("新对话")
+  systemPrompt String?
+  modelId      String?
+  model        AiModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([updatedAt])
+}
+
+/// 一条消息（user / assistant）；assistant 在流式过程中 status = streaming
+model ChatMessage {
+  id               String            @id @default(cuid())
+  conversationId   String
+  conversation     Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role             ChatRole
+  content          String            @db.Text
+  status           ChatMessageStatus @default(completed)
+  finishReason     String?
+  modelId          String?
+  model            AiModel?          @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  modelName        String?
+  promptTokens     Int?
+  completionTokens Int?
+  createdAt        DateTime          @default(now())
+
+  @@index([conversationId, createdAt])
+}

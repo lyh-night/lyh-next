@@ -15,7 +15,8 @@
 | `pnpm build`         | 生产构建（utils → frontend + backend，带 turbo 缓存）                    |
 | `pnpm start`         | 启动前端生产服务                                                         |
 | `pnpm start:backend` | 启动后端生产服务（`node dist/main.js`）                                  |
-| `pnpm lint`          | 逐包执行 ESLint                                                          |
+| `pnpm lint`          | 逐包 ESLint，并检查根目录 `scripts/` 与 `*.config.js`                    |
+| `pnpm lint:root`     | 仅检查根目录脚本与配置文件                                               |
 | `pnpm typecheck`     | 逐包执行 TypeScript 检查（依赖 utils 先构建）                            |
 | `pnpm format`        | 全仓库 Prettier 格式化                                                   |
 
