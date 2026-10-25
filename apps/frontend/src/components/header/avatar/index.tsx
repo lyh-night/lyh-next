@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
@@ -9,9 +10,12 @@ import {
   DropdownMenuTrigger,
 } from '@lyh-next/components'
 
+import SettingsDialog from '@/components/settings'
+
 export default function Avatar() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   if (status === 'loading') {
     return (
@@ -35,13 +39,14 @@ export default function Avatar() {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem>设置</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSettingsOpen(true)}>设置</DropdownMenuItem>
             <DropdownMenuItem>版本信息</DropdownMenuItem>
             <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/auth/login' })}>
               退出登录
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       </div>
     )
   }

@@ -64,6 +64,7 @@ enum ChatMessageStatus { streaming completed aborted error }
 model AiModel {
   id          String   @id @default(cuid())
   displayName String   // 前端展示名
+  provider    String?  // 提供商展示名，如 OpenAI / DeepSeek / Ollama
   model       String   // 传给上游的 model 字段
   baseUrl     String   // OpenAI 兼容地址，如 https://api.deepseek.com/v1
   apiKey      String   // 永不出现在接口响应与日志中
@@ -118,18 +119,23 @@ model ChatMessage {
 
 - `status=streaming`：流式进行中；`completed` 正常结束；`aborted` 客户端中断；`error` 出错。
 - `modelName` 是快照，避免模型配置删除后历史消息看不出"这条是谁答的"。
+- `provider` 只是展示用的提供商名称（OpenAI / DeepSeek / Ollama…），不参与请求。
 - 删除会话 → 级联删除消息；删除模型配置 → 消息与会话的 `modelId` 置空（历史保留）。
 
-### 3.3 手动写入配置
+### 3.3 写入配置
+
+推荐直接用前端的**设置弹窗**（头像 → 设置 → 模型）录入，见 §8.1。
+
+也可以手动写库（应急 / 批量导入）：
 
 ```sql
 INSERT INTO "AiModel"
-  ("id","displayName","model","baseUrl","apiKey","isDefault","isActive","sortOrder","createdAt","updatedAt")
+  ("id","displayName","provider","model","baseUrl","apiKey","isDefault","isActive","sortOrder","createdAt","updatedAt")
 VALUES
-  ('m_deepseek','DeepSeek 对话','deepseek-chat','https://api.deepseek.com/v1','sk-xxx',true,true,0,now(),now());
+  ('m_deepseek','DeepSeek 对话','DeepSeek','deepseek-chat','https://api.deepseek.com/v1','sk-xxx',true,true,0,now(),now());
 ```
 
-也可以用 `pnpm db:studio` 可视化录入。`isDefault=true` 的那条用于"用户没选模型"时的兜底。
+或用 `pnpm db:studio` 可视化录入。`isDefault=true` 的那条用于"用户没选模型"时的兜底。
 
 ---
 
@@ -147,9 +153,9 @@ VALUES
 }
 ```
 
-### 4.1 模型列表
+### 4.1 模型列表与配置管理
 
-`GET /api/chat/models`
+**聊天选择器用**：`GET /api/chat/models`
 
 ```json
 {
@@ -167,6 +173,61 @@ VALUES
 ```
 
 只返回 `isActive=true` 的项；**不返回 `baseUrl` 与 `apiKey`**。
+
+**设置页用**（模型配置管理）：
+
+| 方法     | 路径                       | 说明                                    |
+| -------- | -------------------------- | --------------------------------------- |
+| `GET`    | `/api/chat/models/configs` | 全部模型（含停用），`apiKey` 只返回掩码 |
+| `POST`   | `/api/chat/models`         | 新建，201                               |
+| `PATCH`  | `/api/chat/models/:id`     | 局部更新，`apiKey` 留空表示不修改       |
+| `DELETE` | `/api/chat/models/:id`     | 删除，返回 `{ success: true }`          |
+
+新建请求：
+
+```json
+{
+  "provider": "DeepSeek",
+  "displayName": "DeepSeek 对话",
+  "model": "deepseek-chat",
+  "baseUrl": "https://api.deepseek.com/v1",
+  "apiKey": "sk-...",
+  "isDefault": true,
+  "isActive": true,
+  "temperature": 0.7,
+  "maxTokens": 2048
+}
+```
+
+配置列表项（注意没有 `apiKey` 字段）：
+
+```json
+{
+  "id": "m_deepseek",
+  "provider": "DeepSeek",
+  "displayName": "DeepSeek 对话",
+  "model": "deepseek-chat",
+  "baseUrl": "https://api.deepseek.com/v1",
+  "apiKeyMasked": "sk-****cdef",
+  "isDefault": true,
+  "isActive": true,
+  "sortOrder": 0,
+  "temperature": null,
+  "maxTokens": null,
+  "createdAt": "2026-10-25T13:00:00.000Z",
+  "updatedAt": "2026-10-25T13:00:00.000Z"
+}
+```
+
+约定：
+
+- `apiKey` **只写不读**：读接口一律返回 `apiKeyMasked`（长度 > 8 时 `前3****后4`，否则 `****`）。
+- `PATCH` 时省略或传空串 `apiKey` = 保留原值，编辑其它字段不必重新输入密钥。
+- `isDefault` 全局唯一：设置某一个为默认时，其它模型的 `isDefault` 在同一次事务里置 false。
+- `baseUrl` 保存时去掉末尾 `/`，后端调用时拼接 `/chat/completions`。
+- 校验：`baseUrl` 必须是 http(s) 地址（允许 localhost）、`apiKey` 新建必填、`displayName`/`model` 非空。
+
+> ⚠️ 这些管理接口与其它接口一样**没有鉴权**（后端尚未接入 session 校验）。部署到公网前必须先加鉴权，否则任何人都能改模型配置。
 
 ### 4.2 会话
 
@@ -427,6 +488,38 @@ for (;;) {
 - 自定义响应头需要后端 CORS 的 `exposedHeaders`（已配置 `X-Conversation-Id`、`X-Message-Id`）。
 - 对话页建议做成 Client Component，边收 delta 边渲染；不要在渲染期间重建 reader。
 
+### 8.1 设置弹窗（模型配置管理）
+
+入口：`/home` 顶部头像 → 「设置」（`apps/frontend/src/components/header/avatar/index.tsx`）。
+
+结构：
+
+```
+DialogContent（约 900px 宽，560px 高）
+├─ 左：TabsList（vertical）—— 模型 / 通用
+└─ 右：TabsContent
+     ├─ 模型：列表视图 ⇄ 表单视图
+     └─ 通用：深色模式开关 + 版本
+```
+
+- **列表**：名称（含提供商与「默认」标记）、模型、Base URL、密钥掩码、启用开关、编辑/设为默认/删除；空状态引导「添加模型」。
+- **表单**：提供商（含 OpenAI / DeepSeek / Moonshot / 通义千问 / Ollama 预设，点击自动填 `baseUrl`）、显示名称、模型名称、Base URL、API Key、温度、最大 token、设为默认、启用。
+- **编辑**：API Key 留空 = 不修改，占位提示显示当前掩码；删除有二次确认。
+- 保存成功后重新拉取 `GET /api/chat/models/configs` 并 toast 提示；表单在 tab 内切换视图，不使用嵌套弹窗。
+
+代码位置：
+
+```
+apps/frontend/src/components/settings/
+├─ index.tsx        # SettingsDialog（Dialog + Tabs）
+├─ model-tab.tsx    # 列表 / 删除确认
+├─ model-form.tsx   # react-hook-form + zod 表单
+├─ api.ts           # 模型配置的 fetch 封装
+└─ types.ts         # ModelConfig / ProviderPreset
+```
+
+依赖：新增 shadcn `Tabs`（`packages/components/src/shadcn/tabs.tsx`，基于 `@radix-ui/react-tabs`）。
+
 ---
 
 ## 九、验收标准
@@ -436,7 +529,8 @@ for (;;) {
 3. 客户端中断（`curl --max-time 1`）后上游连接关闭，数据库里该 assistant 消息 `status=aborted` 且保留已生成内容。
 4. 会话列表有 `messageCount` 与 `lastMessage`；历史接口按游标翻页且 `hasMore` 正确；删除会话后消息级联删除。
 5. 无可用模型 → 503；上游 401 → 502；上游返回非 SSE → 502；会话不存在 → 404。
-6. `pnpm lint` / `pnpm typecheck` / `pnpm build` 全绿。
+6. 头像 → 设置 → 模型：能新增 / 编辑 / 删除 / 设为默认 / 启用停用；密钥只显示掩码，编辑留空不改密钥；刷新后配置仍在。
+7. `pnpm lint` / `pnpm typecheck` / `pnpm build` 全绿。
 
 ---
 
@@ -448,5 +542,5 @@ for (;;) {
 - `tools` / function calling、多模态（图片、音频）。
 - token 级上下文裁剪、历史摘要压缩、向量记忆。
 - `apiKey` 加密（AES + `ENCRYPTION_KEY`）、限流（`@nestjs/throttler`）、配额与用量统计。
-- 模型配置的管理接口 / 管理界面（本轮只手动写库）。
+- 「测试连接」按钮（保存前校验 baseUrl / apiKey 是否可用）、模型拖拽排序。
 - 会话归属用户：后续接入鉴权时，给 `Conversation` 加 `userId` 关联 `User`，并在查询处按用户过滤（需要一次 `db:push`）。
