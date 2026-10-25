@@ -7,5 +7,9 @@
   },
   "css.lint.unknownAtRules": "ignore",
   "scss.lint.unknownAtRules": "ignore",
-  "less.lint.unknownAtRules": "ignore"
+  "less.lint.unknownAtRules": "ignore",
+  "tailwindCSS.experimental.configFile": {
+    "apps/frontend/src/styles/index.css": ["apps/frontend/**", "packages/components/**"]
+  },
+  "tailwindCSS.classFunctions": ["cn", "cva", "clsx", "twMerge"]
 }

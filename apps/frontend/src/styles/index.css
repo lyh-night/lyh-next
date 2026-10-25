@@ -9,15 +9,30 @@
 @import './variable.css';
 @import './custom.css';
 
-html,
-body,
-:root {
-  width: 100%;
-  height: 100%;
-  font-size: 14px;
-}
+/*
+ * 基础样式必须放在 @layer base 中：
+ * 未分层（unlayered）的声明优先级高于 Tailwind 的 utilities 层，
+ * 会覆盖 text-* / border-* 等工具类（曾导致 Tooltip 文字颜色失效）。
+ */
+@layer base {
+  html,
+  body,
+  :root {
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+  }
 
-div {
-  border-color: var(--color-border);
-  color: var(--color-foreground);
+  /* 默认文字与背景色挂在 body 上，靠继承生效，不写死在 div 上 */
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  /* 未显式指定边框颜色时的兜底（组件里的 border-* 工具类仍会覆盖） */
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-border);
+  }
 }
