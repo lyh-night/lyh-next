@@ -11,13 +11,12 @@ apps/
   frontend/              # @lyh-next/frontend
     src/
       app/               # App Router 页面 + app 内业务组件
-      provider/          # NextAuthProvider
-      server/            # auth.ts（NextAuth 会话配置）
+      provider/          # SessionProvider（会话状态，登录由后端 cookie 承载）
       styles/            # 全局样式（Tailwind 入口）
       utils/             # 应用内工具（clipboard / api 后端地址）
       middleware.ts
     public/              # 静态资源
-    .env                 # NextAuth 与后端地址相关变量
+    .env                 # AUTH_SECRET 与后端地址相关变量
     next.config.ts
     tsconfig.json
     components.json      # shadcn CLI 配置
@@ -135,14 +134,12 @@ Route Handler 入口。
 
 ### apps/frontend/src/provider
 
-Provider 组件，例如 NextAuthProvider。
+Provider 组件，例如 `SessionProvider`（把 `GET /api/auth/me` 的结果放进 React context）。
 
-### apps/frontend/src/server
+### apps/frontend/src/server（已移除）
 
-服务器端逻辑：
-
-- auth.ts（认证配置）
-- prisma.ts（数据库客户端）
+原 `server/auth.ts`（NextAuth 配置）与 `server/prisma.ts` 已分别迁到后端
+`src/auth/` 与 `src/prisma/`；前端不再有服务端认证/数据库代码。
 
 ### apps/frontend/src/styles
 
@@ -169,10 +166,11 @@ NestJS 12 后端服务，独立进程、独立 tsconfig（`module: nodenext` + �
 - Prisma schema、生成物与 `DATABASE_URL` 都在本包内；`generate` / `db:push` / `db:studio` 由本包提供
 - **不引入测试框架**（无 `*.spec.ts` / vitest / supertest）
 
-### apps/frontend/src/server
+### 认证相关
 
-- `auth.ts`：NextAuth 配置与会话（JWT），凭据校验委托给后端 `POST /api/auth/verify-credentials`
-- 前端**不直连数据库**，不要在此重新引入 Prisma
+- 会话由后端签发 httpOnly JWT cookie（`AUTH_SECRET`），登录/登出/当前用户分别是 `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/me`
+- 前端 `src/provider/session-provider.tsx` 只负责把会话放进 React context，`middleware.ts` 用 `jose` 验签 cookie
+- 前端**不直连数据库**，不要重新引入 Prisma 或 next-auth
 
 ### 根目录配置
 

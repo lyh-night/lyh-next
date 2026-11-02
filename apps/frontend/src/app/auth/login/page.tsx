@@ -1,7 +1,6 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -23,6 +22,7 @@ import {
 } from '@lyh-next/components'
 
 import { toast } from 'sonner'
+import { apiFetch } from '@/utils/api'
 
 const formSchema = z.object({
   email: z.string().email({
@@ -61,19 +61,21 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      const result = await signIn('credentials', {
-        email: values.email,
-        password: values.password,
-        redirect: false,
+      const response = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: values.email, password: values.password }),
       })
-      if (result?.error) {
-        console.log('🚀 ~ handleSubmit ~ result.error:', result.error)
-        toast.error('登录失败，请稍后重试')
-      } else {
-        router.push(callbackUrl)
-        router.refresh()
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const message = Array.isArray(data?.message) ? data.message[0] : data?.message
+        toast.error(message || data?.error || '登录失败，请稍后重试')
+        return
       }
-    } catch (err) {
+
+      router.push(callbackUrl)
+      router.refresh()
+    } catch {
       toast.error('登录失败，请稍后重试')
     } finally {
       setLoading(false)

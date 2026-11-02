@@ -40,6 +40,7 @@ apps/backend         →  独立 NestJS API（不依赖 packages/*）
 - [常用命令](docs/commands.md) — 开发、构建、数据库和 Docker 部署命令
 - [Monorepo 方案](docs/monorepo.md) — 包边界、迁移映射、配置改造与验收标准
 - [AI 对话接口](docs/chat.md) — chat 模块、数据库模型配置、多轮记忆与 SSE 协议
+- [登录认证](docs/auth.md) — Nest 托管会话、cookie 规格、全局守卫与前端会话状态
 
 ---
 
@@ -65,8 +66,8 @@ apps/backend         →  独立 NestJS API（不依赖 packages/*）
 - 后端框架：NestJS 12 + Express（`apps/backend`，ESM，独立 tsconfig，端口 3001，所有路由带 `/api` 前缀）
 - 后端基础设施：`@nestjs/config` 环境变量、全局 `ValidationPipe`、`HttpExceptionFilter` 统一错误、`LoggingInterceptor`、`GET /api/health`、`/api/docs`（Swagger）、`PrismaModule`（全局）、`AuthModule`
 - 前端调用后端：浏览器侧用 `NEXT_PUBLIC_API_URL`（`src/utils/api.ts` 的 `apiUrl()`），服务端用 `BACKEND_URL`
-- 认证方案：NextAuth v5 beta，前端只负责会话（JWT）；凭据校验与注册在 backend（`POST /api/auth/verify-credentials`、`POST /api/auth/register`）
-- AI 对话：`apps/backend/src/chat`，`POST /api/chat/completions` 为 OpenAI 协议 SSE（逐帧透传上游）；模型配置（baseUrl/apiKey/model）存数据库 `AiModel` 表，**不走环境变量**；多轮记忆与历史都在后端（表 `Conversation` / `ChatMessage`）
+- 认证方案：**Nest 托管**。`POST /api/auth/login` 校验后写 httpOnly JWT cookie（`AUTH_SECRET`，默认 7 天），`GET /api/auth/me` 返回当前用户，`POST /api/auth/logout` 清除；后端全局 `JwtAuthGuard` 默认要求登录，公开路由用 `@Public()` 显式声明。**前端已移除 next-auth**，`src/provider/session-provider.tsx` 只做会话状态展示；`middleware.ts` 只判断会话 cookie 是否存在（Edge 构建期无法安全读 secret），cookie 失效时由 `SessionProvider` 收到 401 后跳回登录页
+- AI 对话：`apps/backend/src/chat`，`POST /api/chat/completions` 为 OpenAI 协议 SSE（逐帧透传上游）；模型配置（baseUrl/apiKey/model/provider）存数据库 `AiModel` 表，**不走环境变量**，由前端「头像 → 设置 → 模型」弹窗维护（`/api/chat/models/configs` 等接口，密钥只返回掩码）；多轮记忆与历史都在后端（表 `Conversation` / `ChatMessage`）
 - 数据库 ORM：Prisma 7 + PostgreSQL，schema、Prisma Client 与 `DATABASE_URL` 都在 `apps/backend`（`apps/backend/prisma`、`apps/backend/.env`）；**前端不直连数据库**，也不要再给前端加 Prisma 依赖
 - 部署方式：支持 Docker / Docker Compose（前端 standalone 产物路径含 `apps/frontend/` 层级；后端镜像 `apps/backend/Dockerfile`，构建上下文为仓库根）
 - 根 `package.json` 已定义 `dev`/`build`/`lint`/`typecheck`/`db:push`/`db:studio` 等脚本；**没有** `test` 脚本，不要假定它存在

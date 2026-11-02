@@ -6,9 +6,9 @@ services:
     ports:
       - '3000:3000'
     environment:
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-please-change-this-secret}
       NODE_ENV: production
+      # 仅用于判断"有没有会话 cookie"，真正的鉴权在后端
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-auth_token}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
       BACKEND_URL: ${BACKEND_URL:-http://backend:3001}
     depends_on:
@@ -27,6 +27,9 @@ services:
       NODE_ENV: production
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       DATABASE_URL: ${APP_DATABASE_URL:-postgresql://postgres:postgres@db:5432/lyh-next-db}
+      AUTH_SECRET: ${AUTH_SECRET:-please-change-this-secret}
+      AUTH_TOKEN_TTL: ${AUTH_TOKEN_TTL:-7d}
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-auth_token}
     depends_on:
       db:
         condition: service_healthy

@@ -52,8 +52,8 @@ lyh-next/
 │     │  ├─ app/                        # 页面 + app 内业务组件（原 src/app 原样搬入）
 │     │  │  ├─ api/ auth/ home/ workflow/ example/
 │     │  │  └─ components/              # header / ThemeSwitch / workflow（不包化）
-│     │  ├─ provider/                   # NextAuthProvider
-│     │  ├─ server/                     # auth.ts（NextAuth 会话配置）
+│     │  ├─ provider/                   # SessionProvider（会话状态）
+│     │  ├─ server/                     # 已移除（认证/数据库迁到 backend）
 │     │  ├─ styles/                     # index/variable/shadcn/custom.css（全局样式唯一来源）
 │     │  ├─ utils/                      # clipboard.ts / api.ts（后端地址）
 │     │  └─ middleware.ts
@@ -565,7 +565,7 @@ allowBuilds:
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["DATABASE_URL", "NEXTAUTH_URL", "NEXTAUTH_SECRET", "NEXT_PUBLIC_APP_NAME"],
+  "globalEnv": ["DATABASE_URL", "AUTH_SECRET", "AUTH_COOKIE_NAME", "NEXT_PUBLIC_APP_NAME"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -1049,6 +1049,8 @@ CORS_ORIGINS=http://localhost:3000
 
 ### 20.2 认证边界（方案 A）
 
+> 2026-10 已改为「Nest 托管认证」，本节保留为历史记录，最新边界见 §21。
+
 ```text
 浏览器 ──signIn('credentials')──▶ Next.js /api/auth/*(NextAuth, JWT 会话)
                                       │ 服务端 fetch
@@ -1096,6 +1098,39 @@ CORS_ORIGINS=http://localhost:3000
 ### 20.6 附带修复
 
 - `NextAuth` 增加 `trustHost: true`：自托管/Docker 下没有 Vercel 的可信 Host 推断，缺失时会报 `UntrustedHost`（本轮在生产构建验证时暴露）。
+
+---
+
+## 二十一、认证改为 Nest 托管（移除 NextAuth）
+
+> 详细需求、接口契约、会话规格与验收记录见 **[docs/auth.md](auth.md)**，本节只记录取舍。
+
+### 21.1 结论
+
+- 认证收敛到 Nest：`login` / `logout` / `me` 由后端提供，会话是 **httpOnly + SameSite=Lax 的 JWT cookie**。
+- 前端只保留会话状态展示（`SessionProvider` + `GET /api/auth/me`），`next-auth` 依赖、`[...nextauth]` 路由与 `src/server/auth.ts` 全部删除。
+- 后端**默认所有接口都需要登录**，公开路由用 `@Public()` 显式声明。
+
+```text
+浏览器 ──POST /api/auth/login──▶ Nest（bcrypt 校验）──▶ Set-Cookie: auth_token=<JWT>
+   ├─ 页面 /home ──▶ Next middleware（只判断 cookie 是否存在）──▶ 放行 / 302 登录页
+   ├─ GET /api/auth/me ──▶ SessionProvider（React context）
+   └─ /api/chat/* 等 ──▶ Nest 全局 JwtAuthGuard（cookie 或 Bearer）
+```
+
+### 21.2 为什么不再用 NextAuth
+
+| 方案                          | 结论                                     |
+| ----------------------------- | ---------------------------------------- |
+| 继续用 NextAuth 管会话        | 后端无法校验，接口仍然裸奔；两套身份系统 |
+| Nest 校验 NextAuth 的 JWT     | 后端要引入 Next 生态包，反向耦合         |
+| **Nest 自己签发会话（采用）** | 单一凭据、后端可强制鉴权、前端零密钥     |
+
+### 21.3 关键取舍
+
+- **middleware 不验签**：Edge 运行时的 `process.env` 在构建期内联，Docker 构建（无 `.env`）时会导致所有用户被踢回登录页；改为只判断 cookie 存在，失效时由 `SessionProvider` 的 401 兜底跳转。
+- **无状态 JWT**：不做会话表与主动吊销；`/me` 读库保证展示最新角色。
+- **配置**：`AUTH_SECRET` 只在后端；前端仅需 `AUTH_COOKIE_NAME`（默认一致）。
 
 ---
 

@@ -1,4 +1,4 @@
-import { apiUrl } from '@/utils/api'
+import { apiFetch } from '@/utils/api'
 import type { ModelConfig, ModelPayload } from './types'
 
 interface ErrorBody {
@@ -7,10 +7,7 @@ interface ErrorBody {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-  })
+  const response = await apiFetch(path, init)
 
   const data = (await response.json().catch(() => null)) as (T & ErrorBody) | null
 

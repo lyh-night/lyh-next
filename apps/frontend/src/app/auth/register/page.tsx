@@ -22,7 +22,7 @@ import {
 } from '@lyh-next/components'
 
 import { toast } from 'sonner'
-import { apiUrl } from '@/utils/api'
+import { apiFetch } from '@/utils/api'
 
 const formSchema = z
   .object({
@@ -59,11 +59,8 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const response = await fetch(apiUrl('/api/auth/register'), {
+      const response = await apiFetch('/api/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           email: values.email,
           password: values.password,

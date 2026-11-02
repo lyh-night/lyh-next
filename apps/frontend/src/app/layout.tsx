@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import '@/styles/index.css'
-import NextAuthProvider from '@/provider/NextAuthProvider'
+import SessionProvider from '@/provider/session-provider'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@lyh-next/components'
 
@@ -24,7 +24,7 @@ export default function RootLayout({
           disableTransitionOnChange
           enableColorScheme={false}
         >
-          <NextAuthProvider>{children}</NextAuthProvider>
+          <SessionProvider>{children}</SessionProvider>
           <Toaster />
         </ThemeProvider>
       </body>

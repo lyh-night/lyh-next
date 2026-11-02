@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common'
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Public } from '../auth/public.decorator.js'
 
 export interface HealthStatus {
   status: 'ok'
@@ -11,6 +12,7 @@ export interface HealthStatus {
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
+  @Public()
   @Get()
   @ApiOperation({ summary: '健康检查' })
   @ApiOkResponse({ description: '服务存活时返回 ok' })

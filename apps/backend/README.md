@@ -21,19 +21,26 @@ pnpm dev:backend        # 等价于 pnpm --filter @lyh-next/backend run dev
 cp apps/backend/.env.example apps/backend/.env
 ```
 
-| 变量           | 默认值                  | 说明                           |
-| -------------- | ----------------------- | ------------------------------ |
-| `PORT`         | `3001`                  | 监听端口（前端占用 3000）      |
-| `NODE_ENV`     | `development`           | 运行环境                       |
-| `CORS_ORIGINS` | `http://localhost:3000` | 允许跨域的来源，多个用逗号分隔 |
+| 变量               | 默认值                  | 说明                            |
+| ------------------ | ----------------------- | ------------------------------- |
+| `PORT`             | `3001`                  | 监听端口（前端占用 3000）       |
+| `NODE_ENV`         | `development`           | 运行环境                        |
+| `CORS_ORIGINS`     | `http://localhost:3000` | 允许跨域的来源，多个用逗号分隔  |
+| `AUTH_SECRET`      | 无（必填）              | 会话 JWT 签名密钥，须与前端一致 |
+| `AUTH_TOKEN_TTL`   | `7d`                    | 会话有效期，支持 `12h` / `3600` |
+| `AUTH_COOKIE_NAME` | `auth_token`            | 会话 cookie 名称                |
 
 ## 路由
 
-| 方法 | 路径          | 说明                                              |
-| ---- | ------------- | ------------------------------------------------- |
-| GET  | `/api`        | 服务信息（名称 / 版本 / 环境）                    |
-| GET  | `/api/health` | 健康检查（status / uptime / timestamp / version） |
-| GET  | `/api/docs`   | Swagger 接口文档                                  |
+| 方法 | 路径                 | 说明                                              |
+| ---- | -------------------- | ------------------------------------------------- |
+| GET  | `/api`               | 服务信息（名称 / 版本 / 环境）                    |
+| GET  | `/api/health`        | 健康检查（status / uptime / timestamp / version） |
+| POST | `/api/auth/register` | 注册（公开）                                      |
+| POST | `/api/auth/login`    | 登录，写入 httpOnly 会话 cookie（公开）           |
+| POST | `/api/auth/logout`   | 退出登录，清除 cookie（公开）                     |
+| GET  | `/api/auth/me`       | 当前用户（需登录）                                |
+| GET  | `/api/docs`          | Swagger 接口文档                                  |
 
 错误统一返回：
 
@@ -69,7 +76,7 @@ src/
 ├─ app.module.ts               # ConfigModule + PrismaModule + HealthModule + AuthModule
 ├─ app.controller.ts           # GET /api
 ├─ app.service.ts
-├─ auth/                       # register / verify-credentials
+├─ auth/                       # login / logout / me / register + 全局登录守卫
 ├─ health/                     # GET /api/health
 ├─ prisma/                     # PrismaService（连接与断开托管）
 ├─ generated/prisma/           # Prisma Client 生成物（勿手改）

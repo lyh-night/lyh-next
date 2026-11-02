@@ -3,8 +3,8 @@
   "ui": "tui",
   "globalEnv": [
     "DATABASE_URL",
-    "NEXTAUTH_URL",
-    "NEXTAUTH_SECRET",
+    "AUTH_SECRET",
+    "AUTH_COOKIE_NAME",
     "NEXT_PUBLIC_APP_NAME",
     "NEXT_PUBLIC_API_URL",
     "BACKEND_URL"

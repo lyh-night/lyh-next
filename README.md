@@ -9,7 +9,7 @@
 | 框架     | Next.js 15（App Router）、React 19、TypeScript     |
 | UI       | TailwindCSS 4、shadcn/ui、Lucide React、Remix Icon |
 | 数据     | Prisma 7、PostgreSQL 16                            |
-| 认证     | NextAuth v5 beta                                   |
+| 认证     | Nest 托管会话（httpOnly JWT cookie）               |
 | 状态     | Zustand                                            |
 | 表单     | React Hook Form + Zod                              |
 | 工具库   | ahooks、immer、lodash-es                           |
@@ -41,20 +41,17 @@ pnpm install
 前端与后端各自维护 `.env`：
 
 ```bash
-cp apps/frontend/.env.example apps/frontend/.env   # NextAuth 与后端地址
+cp apps/frontend/.env.example apps/frontend/.env   # 会话密钥与后端地址
 cp apps/backend/.env.example apps/backend/.env     # 数据库与后端配置
 ```
 
 `apps/frontend/.env`：
 
 ```bash
-# 应用访问地址，生产环境改为实际域名
-NEXTAUTH_URL="http://localhost:3000"
+# 会话 cookie 名称（需与后端一致，默认 auth_token）
+AUTH_COOKIE_NAME="auth_token"
 
-# 会话加密密钥，生产环境务必替换为强随机字符串（`openssl rand -base64 32`）
-NEXTAUTH_SECRET="your-secret-key-here"
-
-# 后端 API：浏览器侧请求与 NextAuth 服务端校验
+# 后端 API：浏览器侧请求 / 服务端调用
 NEXT_PUBLIC_API_URL="http://localhost:3001"
 BACKEND_URL="http://localhost:3001"
 ```
@@ -67,17 +64,23 @@ NODE_ENV=development
 CORS_ORIGINS=http://localhost:3000
 # 使用 Docker 容器时保持默认（本地 6432 端口）
 DATABASE_URL="postgresql://postgres:postgres@localhost:6432/lyh-next-db"
+
+# 会话签名密钥（必填），生产环境务必替换为强随机字符串
+AUTH_SECRET="your-secret-key-here"
+AUTH_TOKEN_TTL=7d
+AUTH_COOKIE_NAME=auth_token
 ```
 
-| 字段                  | 所属 | 必填 | 说明                  |
-| --------------------- | ---- | ---- | --------------------- |
-| `DATABASE_URL`        | 后端 | 是   | PostgreSQL 连接字符串 |
-| `PORT`                | 后端 | 否   | 默认 `3001`           |
-| `CORS_ORIGINS`        | 后端 | 否   | 允许的前端来源        |
-| `NEXTAUTH_URL`        | 前端 | 是   | 应用访问地址          |
-| `NEXTAUTH_SECRET`     | 前端 | 是   | 会话加密密钥          |
-| `NEXT_PUBLIC_API_URL` | 前端 | 否   | 浏览器访问后端的地址  |
-| `BACKEND_URL`         | 前端 | 否   | 服务端访问后端的地址  |
+| 字段                  | 所属  | 必填 | 说明                              |
+| --------------------- | ----- | ---- | --------------------------------- |
+| `DATABASE_URL`        | 后端  | 是   | PostgreSQL 连接字符串             |
+| `PORT`                | 后端  | 否   | 默认 `3001`                       |
+| `CORS_ORIGINS`        | 后端  | 否   | 允许的前端来源                    |
+| `AUTH_SECRET`         | 后端  | 是   | 会话 JWT 签名密钥                 |
+| `AUTH_TOKEN_TTL`      | 后端  | 否   | 会话有效期，默认 `7d`             |
+| `AUTH_COOKIE_NAME`    | 前+后 | 否   | 会话 cookie 名，默认 `auth_token` |
+| `NEXT_PUBLIC_API_URL` | 前端  | 否   | 浏览器访问后端的地址              |
+| `BACKEND_URL`         | 前端  | 否   | 服务端访问后端的地址              |
 
 > 数据库 schema、Prisma Client 与 `db:push` / `db:studio` 都在 `apps/backend`；前端不直连数据库。
 
@@ -181,8 +184,6 @@ docker compose down -v     # 删除数据卷
 docker build -t lyh-next:latest .
 docker run -d --name lyh-next -p 3000:3000 \
   -e BACKEND_URL="http://<backend-host>:3001" \
-  -e NEXTAUTH_URL="http://your-domain.com" \
-  -e NEXTAUTH_SECRET="your-strong-secret" \
   lyh-next:latest
 
 # 后端（构建上下文为仓库根）
@@ -190,6 +191,7 @@ docker build -f apps/backend/Dockerfile -t lyh-next-backend .
 docker run -d --name lyh-next-backend -p 3001:3001 \
   -e DATABASE_URL="postgresql://user:pass@<db-host>:5432/lyh-next-db" \
   -e CORS_ORIGINS="http://your-domain.com" \
+  -e AUTH_SECRET="your-strong-secret" \
   lyh-next-backend
 ```
 
@@ -201,8 +203,9 @@ docker run -d --name lyh-next-backend -p 3001:3001 \
 | --------------------- | ---------------------------------------------------- | ---------------------------- |
 | `APP_DATABASE_URL`    | `postgresql://postgres:postgres@db:5432/lyh-next-db` | backend 连接数据库（容器内） |
 | `CORS_ORIGINS`        | `http://localhost:3000`                              | backend 允许的前端来源       |
-| `NEXTAUTH_URL`        | `http://localhost:3000`                              | 改为实际域名                 |
-| `NEXTAUTH_SECRET`     | `please-change-this-secret`                          | 必须替换为强随机字符串       |
+| `AUTH_SECRET`         | `please-change-this-secret`                          | 会话签名密钥，务必替换       |
+| `AUTH_TOKEN_TTL`      | `7d`                                                 | 会话有效期                   |
+| `AUTH_COOKIE_NAME`    | `auth_token`                                         | 会话 cookie 名               |
 | `BACKEND_URL`         | `http://backend:3001`                                | 前端服务端访问 backend       |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:3001`                              | 浏览器访问 backend           |
 

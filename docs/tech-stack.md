@@ -36,7 +36,7 @@
 
 - Prisma 7
 - PostgreSQL
-- NextAuth v5 beta
+- 认证：Nest 签发 httpOnly JWT cookie（`jose`），前端自建 `SessionProvider`（已移除 next-auth）
 - @auth/prisma-adapter
 - @prisma/adapter-pg
 

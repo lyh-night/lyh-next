@@ -42,10 +42,7 @@ export class AuthService {
     return { message: '注册成功', user }
   }
 
-  /**
-   * 凭据校验：供前端 NextAuth 的 authorize() 服务端调用。
-   * 成功返回用户档案，失败统一 401（不暴露邮箱是否存在）。
-   */
+  /** 登录：校验邮箱密码，成功返回用户档案（由 AuthController 签发 cookie） */
   async verifyCredentials(dto: VerifyCredentialsDto): Promise<AuthUser> {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } })
 
@@ -66,5 +63,17 @@ export class AuthService {
       hasAccess: user.hasAccess,
       role: user.role,
     }
+  }
+
+  /** 读取用户最新档案：/me 与受保护接口用它，保证角色变更即时生效 */
+  async profile(userId: string): Promise<AuthUser> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, image: true, hasAccess: true, role: true },
+    })
+
+    if (!user) throw new UnauthorizedException('用户不存在或已被删除')
+
+    return user
   }
 }

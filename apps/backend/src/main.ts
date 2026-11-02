@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+import cookieParser from 'cookie-parser'
 import { AppModule } from './app.module.js'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js'
@@ -12,8 +13,16 @@ async function bootstrap() {
   const config = app.get(ConfigService)
   const logger = new Logger('Bootstrap')
 
+  // 缺少签名密钥时直接失败，避免带着可伪造的会话启动
+  if (!config.get<string>('AUTH_SECRET')) {
+    throw new Error('缺少 AUTH_SECRET 环境变量，请在 apps/backend/.env 中配置')
+  }
+
   // 统一 API 前缀：业务路由、健康检查与文档都挂在 /api 下
   app.setGlobalPrefix('api')
+
+  // 解析 cookie（登录守卫从 httpOnly cookie 读取会话）
+  app.use(cookieParser())
 
   // 对话接口的请求体可能较长，放宽 JSON 体积上限（默认 100kb）
   app.useBodyParser('json', { limit: '2mb' })

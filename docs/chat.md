@@ -141,7 +141,7 @@ VALUES
 
 ## 四、接口契约
 
-所有接口挂在 `/api/chat` 下，错误使用统一结构：
+所有接口挂在 `/api/chat` 下，**除 `GET /api/health` 等公开路由外都需要登录**（未登录 401）。错误使用统一结构：
 
 ```json
 {
@@ -227,7 +227,7 @@ VALUES
 - `baseUrl` 保存时去掉末尾 `/`，后端调用时拼接 `/chat/completions`。
 - 校验：`baseUrl` 必须是 http(s) 地址（允许 localhost）、`apiKey` 新建必填、`displayName`/`model` 非空。
 
-> ⚠️ 这些管理接口与其它接口一样**没有鉴权**（后端尚未接入 session 校验）。部署到公网前必须先加鉴权，否则任何人都能改模型配置。
+> 这些接口与其它 `/api/chat/*` 一样**需要登录**（Nest 全局守卫校验 httpOnly 会话 cookie，未登录返回 401）。登录态由 `POST /api/auth/login` 建立，见 [monorepo.md](monorepo.md) §21。
 
 ### 4.2 会话
 
@@ -435,8 +435,7 @@ POST /api/chat/completions
 - 密钥安全：`apiKey` 目前**明文**存库（与 Prisma 默认一致），接口与日志都不会输出；
   后续可加 `ENCRYPTION_KEY` 做 AES 加密（见"非目标"）。
 - 代理部署：SSE 需要关掉缓冲（已返回 `X-Accel-Buffering: no`，nginx 侧也可 `proxy_buffering off`）。
-- 鉴权：当前接口**无鉴权**，与 `verify-credentials` 一致（浏览器侧无法安全持有共享密钥）。
-  一旦部署到公网，必须先加鉴权（见"非目标"）。
+- 鉴权：`/api/chat/*` 需要登录（Nest 全局 `JwtAuthGuard` + httpOnly cookie）；浏览器侧请求必须带 `credentials: 'include'`（`src/utils/api.ts` 的 `apiFetch` 已处理）。
 
 ---
 

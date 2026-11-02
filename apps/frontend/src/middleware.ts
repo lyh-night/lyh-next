@@ -1,25 +1,25 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
 
+const COOKIE_NAME = process.env.AUTH_COOKIE_NAME ?? 'auth_token'
+
+// 公开路由 - 不需要认证
+const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/api/auth']
+
+/**
+ * 这里只做"有没有会话 cookie"的粗粒度拦截：
+ * Edge 运行时的 process.env 在构建期内联，无法在这里安全地验签，
+ * 真正的鉴权由后端 JwtAuthGuard 负责；cookie 过期/伪造时
+ * 前端 SessionProvider 会因 /api/auth/me 返回 401 而跳回登录页。
+ */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  })
 
-  // 公开路由 - 不需要认证
-  const publicPaths = ['/auth/login', '/auth/register', '/api/auth']
-  const isPublicPath = publicPaths.some((path) => pathname.startsWith(path))
-
-  // 如果是公开路径，允许访问
-  if (isPublicPath) {
+  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
     return NextResponse.next()
   }
 
-  // 如果没有token且不是公开路径，重定向到登录页
-  if (!token) {
+  if (!request.cookies.has(COOKIE_NAME)) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
