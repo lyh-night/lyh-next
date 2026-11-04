@@ -977,18 +977,18 @@ CMD ["node", "apps/frontend/server.js"]
 
 ### 19.3 运行时基础设施
 
-| 能力     | 实现                                                                                                              | 位置                   |
-| -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 配置     | `@nestjs/config`，`isGlobal`、`cache`，env 优先级 `.env.local` → `.env`                                           | `app.module.ts`        |
-| 全局前缀 | `app.setGlobalPrefix('api')`                                                                                      | `main.ts`              |
-| 参数校验 | 全局 `ValidationPipe`（`whitelist` + `transform` + `forbidNonWhitelisted`）                                       | `main.ts`              |
-| CORS     | `CORS_ORIGINS` 逗号分隔，默认 `http://localhost:3000`，`credentials: true`                                        | `main.ts`              |
-| 错误结构 | 全局 `HttpExceptionFilter`：`{ statusCode, message, error, path, timestamp }`，非 `HttpException` 按 500 记录堆栈 | `common/filters/`      |
-| 访问日志 | 全局 `LoggingInterceptor`：`METHOD path status 耗时ms`                                                            | `common/interceptors/` |
-| 健康检查 | `GET /api/health` → `{ status, uptime, timestamp, version }`                                                      | `health/`              |
-| 服务信息 | `GET /api` → `{ name, version, environment }`                                                                     | `app.controller.ts`    |
-| API 文档 | `@nestjs/swagger`，`GET /api/docs`，`addBearerAuth()` 预置                                                        | `main.ts`              |
-| 优雅关闭 | `app.enableShutdownHooks()`，响应 `SIGTERM`                                                                       | `main.ts`              |
+| 能力     | 实现                                                                                                                                      | 位置                                      |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| 配置     | `@nestjs/config`，`isGlobal`、`cache`，env 优先级 `.env.local` → `.env`                                                                   | `app.module.ts`                           |
+| 全局前缀 | `app.setGlobalPrefix('api')`                                                                                                              | `main.ts`                                 |
+| 参数校验 | 全局 `ValidationPipe`（`whitelist` + `transform` + `forbidNonWhitelisted`）                                                               | `main.ts`                                 |
+| CORS     | `CORS_ORIGINS` 逗号分隔，默认 `http://localhost:3000`，`credentials: true`                                                                | `main.ts`                                 |
+| 响应结构 | 全局 `TransformInterceptor` + `HttpExceptionFilter`：`{ status: { code, message }, data, stack }`；JSON 接口 HTTP 统一 200，`code=0` 成功 | `common/interceptors/`、`common/filters/` |
+| 访问日志 | 全局 `LoggingInterceptor`：`METHOD path status 耗时ms`                                                                                    | `common/interceptors/`                    |
+| 健康检查 | `GET /api/health` → `data` 为 `{ status, uptime, timestamp, version }`                                                                    | `health/`                                 |
+| 服务信息 | `GET /api` → `data` 为 `{ name, version, environment }`                                                                                   | `app.controller.ts`                       |
+| API 文档 | `@nestjs/swagger`，`GET /api/docs`，`addBearerAuth()` 预置                                                                                | `main.ts`                                 |
+| 优雅关闭 | `app.enableShutdownHooks()`，响应 `SIGTERM`                                                                                               | `main.ts`                                 |
 
 ### 19.4 端口与路由约定
 
@@ -1035,6 +1035,8 @@ CORS_ORIGINS=http://localhost:3000
 ## 二十、数据与认证迁移至 backend
 
 > 目标：把数据库与认证的归属从 `apps/frontend` 收敛到 `apps/backend`，前端只做 UI 与会话。
+>
+> 本节是迁移当时的历史记录；当前统一响应契约（`{ status, data, stack }`、JSON 接口 HTTP 200）见 [auth.md](auth.md) §四。
 
 ### 20.1 迁移映射
 

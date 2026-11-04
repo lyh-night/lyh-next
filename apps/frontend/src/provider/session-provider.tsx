@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { apiUrl } from '@/utils/api'
+import { onUnauthorized, request } from '@/utils/api'
 
 export interface SessionUser {
   id: string
@@ -41,18 +41,15 @@ export default function SessionProvider({ children }: { children: React.ReactNod
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch(apiUrl('/api/auth/me'), {
-        credentials: 'include',
-        cache: 'no-store',
+      const data = await request<{ user: SessionUser }>({
+        url: '/api/auth/me',
+        method: 'GET',
+        // 会话状态必须实时，避免浏览器复用旧响应
+        headers: { 'Cache-Control': 'no-cache' },
+        silent: true,
+        skipAuthRedirect: true,
       })
 
-      if (!response.ok) {
-        setUser(null)
-        setStatus('unauthenticated')
-        return
-      }
-
-      const data = (await response.json()) as { user: SessionUser }
       setUser(data.user)
       setStatus('authenticated')
     } catch {
@@ -73,7 +70,16 @@ export default function SessionProvider({ children }: { children: React.ReactNod
     }
   }, [pathname, refresh])
 
-  // cookie 过期或失效时（/me 返回 401），把用户送回登录页
+  // 任意受保护接口返回 status.code=401 时同步会话状态；跳转仍由下方 effect 统一处理
+  useEffect(() => {
+    return onUnauthorized(() => {
+      setUser(null)
+      setStatus('unauthenticated')
+      setCheckedPath(pathname)
+    })
+  }, [pathname])
+
+  // cookie 过期或失效时（/me 返回 status.code=401），把用户送回登录页
   useEffect(() => {
     // 只对"当前路由的检查结果"生效，避免沿用上一个页面的状态
     if (checkedPath !== pathname) return
@@ -85,7 +91,12 @@ export default function SessionProvider({ children }: { children: React.ReactNod
 
   const logout = useCallback(async () => {
     try {
-      await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' })
+      await request({
+        url: '/api/auth/logout',
+        method: 'POST',
+        silent: true,
+        skipAuthRedirect: true,
+      })
     } catch {
       // 即使请求失败也清掉本地状态，避免界面卡在"已登录"
     }

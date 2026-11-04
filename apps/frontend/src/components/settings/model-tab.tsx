@@ -75,8 +75,8 @@ export default function ModelTab() {
     try {
       await updateModel(model.id, payload)
       await load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '操作失败，请稍后重试')
+    } catch {
+      // 错误已由 request 统一提示
     }
   }
 
@@ -88,8 +88,8 @@ export default function ModelTab() {
       toast.success('模型已删除')
       setRemoving(null)
       await load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '删除失败，请稍后重试')
+    } catch {
+      // 错误已由 request 统一提示
     } finally {
       setRemovingPending(false)
     }

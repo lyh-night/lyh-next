@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import type { CookieOptions, Response } from 'express'
 import { AuthService, type AuthUser } from './auth.service.js'
 import { RegisterDto } from './dto/register.dto.js'
@@ -32,9 +32,9 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  @HttpCode(201)
+  @HttpCode(200)
   @ApiOperation({ summary: '注册账号' })
-  @ApiCreatedResponse({ description: '注册成功，返回新建用户的基础信息' })
+  @ApiOkResponse({ description: '注册成功，返回新建用户的基础信息' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto)
   }
@@ -67,7 +67,7 @@ export class AuthController {
 
   @Get('me')
   @ApiOperation({ summary: '当前登录用户（读取最新档案）' })
-  @ApiOkResponse({ description: '未登录返回 401' })
+  @ApiOkResponse({ description: '未登录时返回 status.code=401' })
   async me(@Req() request: AuthRequest): Promise<{ user: AuthUser }> {
     // 守卫已保证 request.user 存在
     const user = await this.authService.profile(request.user?.id ?? '')

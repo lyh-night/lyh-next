@@ -2,6 +2,7 @@ import { Body, Controller, Post, Res } from '@nestjs/common'
 import { ApiBody, ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger'
 import { once } from 'node:events'
 import type { Response } from 'express'
+import { SkipResponseEnvelope } from '../common/decorators/skip-response-envelope.decorator.js'
 import { ChatService } from './chat.service.js'
 import { ChatCompletionDto } from './dto/chat-completion.dto.js'
 import { SSE_HEADERS, startKeepAlive, writeSseData } from './sse.js'
@@ -13,6 +14,7 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post('completions')
+  @SkipResponseEnvelope()
   @ApiOperation({
     summary: 'AI 对话（OpenAI 协议 SSE 流式）',
     description:
@@ -35,7 +37,7 @@ export class ChatController {
     let usage: ParsedUsage | undefined
     let sawDone = false
     let aborted = false
-    // 出错但还没开始流时，把响应交回全局过滤器；finally 里不能 res.end()，否则会抢先提交 201 空响应
+    // 出错但还没开始流时，把响应交回全局过滤器；finally 里不能 res.end()，否则会抢先提交 200 空响应
     let delegateToFilter = false
 
     const finalize = async (status: 'completed' | 'aborted' | 'error', reason?: string | null) => {

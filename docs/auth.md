@@ -79,17 +79,21 @@
 
 ## 四、接口契约
 
-所有接口挂在 `/api` 下，错误沿用统一结构：
+所有接口挂在 `/api` 下，响应统一为：
 
 ```json
 {
-  "statusCode": 401,
-  "message": "未登录或登录已过期",
-  "error": "Unauthorized",
-  "path": "/api/auth/me",
-  "timestamp": "..."
+  "status": { "code": 0, "message": "" },
+  "data": {},
+  "stack": []
 }
 ```
+
+- `status.code = 0` 表示成功，此时 `message` 为空字符串。
+- 业务失败（参数错误、未登录、邮箱重复等）**HTTP 状态仍为 200**，通过 `status.code` 表达错误（400/401/409/500 等），`data` 为 `null`，`message` 为提示文案。
+- `stack` 为后端调用栈（按行拆分的字符串数组），成功时为 `[]`；前端不展示。
+- 只有代理/网关/网络层错误才可能返回非 200。
+- 下文各接口示例只展示 `data` 内容，实际响应统一包一层上述信封。
 
 ### 4.1 登录
 
@@ -99,7 +103,7 @@
 { "email": "user@example.com", "password": "test123456" }
 ```
 
-成功 `200`：
+成功：
 
 ```json
 {
@@ -120,13 +124,13 @@
 Set-Cookie: auth_token=<JWT>; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax
 ```
 
-失败 `401`：`邮箱或密码错误`（不区分"用户不存在"与"密码错误"）。
+失败：HTTP 200，`status.code=401`，`status.message=邮箱或密码错误`（不区分"用户不存在"与"密码错误"）。
 
 ### 4.2 登出
 
 `POST /api/auth/logout`（公开）
 
-- 清空 cookie（`Max-Age=0`），返回 `{ "success": true }`。
+- 清空 cookie（`Max-Age=0`），`data` 为 `{ "success": true }`。
 - 即使 cookie 已过期也能调用（无副作用）。
 
 ### 4.3 当前用户
@@ -147,13 +151,14 @@ Set-Cookie: auth_token=<JWT>; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax
 ```
 
 - **读数据库**取最新档案，角色变更即时生效（token 里的 claims 仅用于守卫快速判定）。
-- 未登录 / token 过期 → `401`。
+- 未登录 / token 过期 → HTTP 200，`status.code=401`。
 
 ### 4.4 注册
 
 `POST /api/auth/register`（公开）
 
-- `201` 创建成功；`409` 邮箱已存在；`400` 参数非法（密码至少 6 位）。
+- 成功：HTTP 200，`status.code=0`。
+- 邮箱已存在：HTTP 200，`status.code=409`；参数非法：HTTP 200，`status.code=400`（密码至少 6 位）。
 - 注册成功后不自动登录，前端跳转登录页。
 
 ### 4.5 守卫与公开路由
@@ -171,13 +176,15 @@ Set-Cookie: auth_token=<JWT>; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax
 
 ### 4.6 错误码
 
-| 场景                       | 状态码 | message                |
-| -------------------------- | ------ | ---------------------- |
-| 未携带 / 无效 / 过期 token | 401    | `未登录或登录已过期`   |
-| 登录密码错误               | 401    | `邮箱或密码错误`       |
-| `/me` 时用户已被删除       | 401    | `用户不存在或已被删除` |
-| 注册邮箱重复               | 409    | `该邮箱已被注册`       |
-| 注册参数非法               | 400    | 校验提示               |
+HTTP 状态统一为 200，错误看 `status.code`：
+
+| 场景                       | status.code | message                |
+| -------------------------- | ----------- | ---------------------- |
+| 未携带 / 无效 / 过期 token | 401         | `未登录或登录已过期`   |
+| 登录密码错误               | 401         | `邮箱或密码错误`       |
+| `/me` 时用户已被删除       | 401         | `用户不存在或已被删除` |
+| 注册邮箱重复               | 409         | `该邮箱已被注册`       |
+| 注册参数非法               | 400         | 校验提示               |
 
 ---
 
@@ -270,15 +277,17 @@ apps/backend/src/auth/
 - `useSession()` 返回 `{ data, status, refresh, logout }`，形状与原来的 `next-auth` 用法兼容，减少调用方改动。
 - 路由变化时重新请求 `/api/auth/me`，登录/退出后界面立即更新。
 - **竞态处理**：用 `checkedPath` 记录"会话检查针对的是哪个路由"，只有 `checkedPath === pathname` 时才允许"未登录跳转"。否则登录成功跳转 `/home` 的瞬间会拿着登录页的 `unauthenticated` 状态把用户弹回登录页。
-- `/me` 返回 401（cookie 过期/伪造）→ 自动跳转 `/auth/login?callbackUrl=<当前路径>`。
+- `/me` 返回 `status.code=401`（cookie 过期/伪造）→ 自动跳转 `/auth/login?callbackUrl=<当前路径>`。
 
 ### 7.3 请求封装
 
-`src/utils/api.ts` 新增 `apiFetch(path, init)`：
+`src/utils/api.ts` 基于 axios，是浏览器侧唯一 JSON 请求入口：
 
-- 默认 `credentials: 'include'`（跨端口必须显式带凭据）。
-- 默认 `Content-Type: application/json`。
-- 登录页、注册页、设置弹窗统一使用，避免各处漏写 `credentials`。
+- axios 实例统一 `baseURL`、`withCredentials: true`、30s 超时；对象 `data` 自动 JSON 序列化。
+- 响应拦截器校验 `{ status, data, stack }`：`status.code !== 0` 时抛 `ApiError`（含 `code` / `serverStack`），并默认弹一次 toast；`silent: true` 可关闭。
+- 401（`status.code === 401` 或 HTTP 401）触发全局会话失效，`SessionProvider` 清状态并跳 `/auth/login?callbackUrl=…`；登录、注册、登出、`/me` 传 `skipAuthRedirect: true`。
+- 非 200（代理/网络异常）也走同一 `ApiError` 归一化；网络失败、超时、主动取消有独立文案。
+- SSE / 流式接口不在 axios 层处理，后续使用 `fetch-event-source`。
 
 ### 7.4 middleware 的职责边界
 
@@ -295,13 +304,13 @@ if (!request.cookies.has(COOKIE_NAME)) redirect('/auth/login?callbackUrl=…')
 
 ### 7.5 页面改动
 
-| 文件                                 | 改动                                                                        |
-| ------------------------------------ | --------------------------------------------------------------------------- |
-| `app/auth/login/page.tsx`            | `signIn()` → `apiFetch('/api/auth/login')`，成功 `router.push(callbackUrl)` |
-| `app/auth/register/page.tsx`         | 改用 `apiFetch`（行为不变）                                                 |
-| `components/header/avatar/index.tsx` | `useSession()` 换成新 provider；`signOut` → `logout()`                      |
-| `app/layout.tsx`                     | `NextAuthProvider` → `SessionProvider`                                      |
-| `middleware.ts`                      | `getToken` → 判断 cookie 是否存在                                           |
+| 文件                                 | 改动                                                                                                                              |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `app/auth/login/page.tsx`            | `signIn()` → `request({ url: '/api/auth/login', method: 'POST', data, skipAuthRedirect: true })`，成功 `router.push(callbackUrl)` |
+| `app/auth/register/page.tsx`         | 改用 `request(..., { skipAuthRedirect: true })`（行为不变）                                                                       |
+| `components/header/avatar/index.tsx` | `useSession()` 换成新 provider；`signOut` → `logout()`                                                                            |
+| `app/layout.tsx`                     | `NextAuthProvider` → `SessionProvider`                                                                                            |
+| `middleware.ts`                      | `getToken` → 判断 cookie 是否存在                                                                                                 |
 
 ---
 
@@ -361,13 +370,13 @@ BACKEND_URL="http://localhost:3001"
 
 ## 十、验收标准
 
-1. 未登录访问任意业务接口（如 `GET /api/chat/models`）返回 `401`。
+1. 未登录访问任意业务接口（如 `GET /api/chat/models`）返回 HTTP 200 + `status.code=401`。
 2. `POST /api/auth/login` 成功返回 `200` 且 `Set-Cookie` 含 `HttpOnly`、`SameSite=Lax`、`Max-Age`。
 3. 带 cookie 访问 `GET /api/auth/me` 返回最新用户档案；用 `Authorization: Bearer <token>` 同样可用。
-4. `POST /api/auth/logout` 后原 cookie 再访问受保护接口返回 `401`。
+4. `POST /api/auth/logout` 后原 cookie 再访问受保护接口返回 `status.code=401`。
 5. 未登录访问 `/home` 被 middleware 重定向到 `/auth/login?callbackUrl=%2Fhome`。
 6. 浏览器全流程通过：登录 → `/home` 显示头像 → 打开设置弹窗（受保护接口正常）→ 退出 → 回登录页；再访问 `/home` 再次被拦截。
-7. 伪造/过期 cookie：middleware 放行后，`SessionProvider` 在 `/me` 401 时跳回登录页。
+7. 伪造/过期 cookie：middleware 放行后，`SessionProvider` 在 `/me` 返回 `status.code=401` 时跳回登录页。
 8. 前端在**没有 `.env` 的环境**构建后，带合法 cookie 访问 `/home` 仍为 `200`（验证 middleware 不依赖构建期密钥）。
 9. `pnpm lint` / `pnpm typecheck` / `pnpm build` 全绿。
 
@@ -377,11 +386,11 @@ BACKEND_URL="http://localhost:3001"
 
 | 项                                  | 结果                                                                                                          |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 未登录 `GET /api/chat/models`       | 401 `未登录或登录已过期`                                                                                      |
+| 未登录 `GET /api/chat/models`       | HTTP 200，`status.code=401` `未登录或登录已过期`                                                              |
 | `POST /api/auth/login`              | 200，`Set-Cookie: auth_token=…; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax`                               |
 | 带 cookie `GET /api/auth/me`        | 200，返回 `{ id, email, name, role, hasAccess }`                                                              |
 | `Authorization: Bearer`             | 200（同一 token 两种传法都可用）                                                                              |
-| `POST /api/auth/logout` 后访问      | 401                                                                                                           |
+| `POST /api/auth/logout` 后访问      | HTTP 200，`status.code=401`                                                                                   |
 | 未登录访问 `/home`                  | 307 → `/auth/login?callbackUrl=%2Fhome`                                                                       |
 | 浏览器全流程                        | 伪造 cookie 被弹回登录页；登录 → `/home` 头像正常；设置弹窗加载模型成功；退出 → 登录页；再访问 `/home` 被拦截 |
 | 无 `.env` 构建 + 合法 cookie        | 200（修复前为 307）                                                                                           |

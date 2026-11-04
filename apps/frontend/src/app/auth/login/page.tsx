@@ -21,8 +21,7 @@ import {
   Input,
 } from '@lyh-next/components'
 
-import { toast } from 'sonner'
-import { apiFetch } from '@/utils/api'
+import { request } from '@/utils/api'
 
 const formSchema = z.object({
   email: z.string().email({
@@ -57,26 +56,20 @@ function LoginForm() {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values)
     setLoading(true)
 
     try {
-      const response = await apiFetch('/api/auth/login', {
+      await request({
+        url: '/api/auth/login',
         method: 'POST',
-        body: JSON.stringify({ email: values.email, password: values.password }),
+        data: { email: values.email, password: values.password },
+        skipAuthRedirect: true,
       })
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        const message = Array.isArray(data?.message) ? data.message[0] : data?.message
-        toast.error(message || data?.error || '登录失败，请稍后重试')
-        return
-      }
 
       router.push(callbackUrl)
       router.refresh()
     } catch {
-      toast.error('登录失败，请稍后重试')
+      // 错误已由 request 统一提示
     } finally {
       setLoading(false)
     }

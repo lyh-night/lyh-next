@@ -72,7 +72,13 @@ Zod Schema 应作为类型来源。
 Component → Hook → Service → API
 ```
 
-不要在组件中直接 `fetch()`。
+不要在组件中直接 `fetch()` 或 `axios()`。浏览器侧 JSON 请求统一走 `apps/frontend/src/utils/api.ts` 的 axios 封装：
+
+- 用 `request<T>({ url, method, data })`，不要自己拼 baseURL、`JSON.stringify` 或判断 `response.status`。
+- 后端响应为 `{ status: { code, message }, data, stack }`；成功判断看 `status.code === 0`，由拦截器完成。
+- 公开接口（登录、注册、登出、`/me`）必须传 `skipAuthRedirect: true`，避免业务 401 触发全局跳登录。
+- 后端 JSON 接口成功与业务失败都返回 HTTP 200；新增 `POST` 路由记得加 `@HttpCode(200)`，避免 Nest 默认 201。
+- SSE / 流式接口不在该封装内处理，后续统一使用 `fetch-event-source`。
 
 ---
 
@@ -83,6 +89,13 @@ Component → Hook → Service → API
 - 使用 `try/catch`
 - 不要吞掉异常
 - 错误信息应明确
+
+统一封装后：
+
+- 错误提示由 axios 响应拦截器负责（归一化 `ApiError` + 默认 toast），页面不再重复 `toast.error`。
+- 需要页面内联展示（如列表加载失败 + 重试）时传 `silent: true`，在 `catch` 中读取 `ApiError.message`。
+- `catch` 只用于控制流（复位 loading、保持表单内容等），不要静默丢弃错误；静态分析仍需满足 `try/catch` 约定。
+- 后端 `stack` 存在 `ApiError.serverStack`，仅供排查，不向用户展示。
 
 ---
 

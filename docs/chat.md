@@ -141,15 +141,29 @@ VALUES
 
 ## 四、接口契约
 
-所有接口挂在 `/api/chat` 下，**除 `GET /api/health` 等公开路由外都需要登录**（未登录 401）。错误使用统一结构：
+所有接口挂在 `/api/chat` 下，**除 `GET /api/health` 等公开路由外都需要登录**（未登录时 HTTP 200 + `status.code=401`）。
+
+响应统一为：
 
 ```json
 {
-  "statusCode": 400,
-  "message": "...",
-  "error": "Bad Request",
-  "path": "/api/chat/...",
-  "timestamp": "..."
+  "status": { "code": 0, "message": "" },
+  "data": {},
+  "stack": []
+}
+```
+
+- 成功 `status.code=0`，业务失败 `status.code` 为 400/404/429/500 等；HTTP 状态统一为 200。
+- `data` 失败时为 `null`；`stack` 为后端调用栈，成功时为 `[]`。
+- 下文示例只展示 `data` 内容；SSE 成功响应本身是 `text/event-stream`，不包信封。
+
+业务失败示例（HTTP 仍为 200）：
+
+```json
+{
+  "status": { "code": 400, "message": "..." },
+  "data": null,
+  "stack": ["BadRequestException: ...", "    at ..."]
 }
 ```
 
@@ -227,7 +241,7 @@ VALUES
 - `baseUrl` 保存时去掉末尾 `/`，后端调用时拼接 `/chat/completions`。
 - 校验：`baseUrl` 必须是 http(s) 地址（允许 localhost）、`apiKey` 新建必填、`displayName`/`model` 非空。
 
-> 这些接口与其它 `/api/chat/*` 一样**需要登录**（Nest 全局守卫校验 httpOnly 会话 cookie，未登录返回 401）。登录态由 `POST /api/auth/login` 建立，见 [monorepo.md](monorepo.md) §21。
+> 这些接口与其它 `/api/chat/*` 一样**需要登录**（Nest 全局守卫校验 httpOnly 会话 cookie，未登录时 HTTP 200 + `status.code=401`）。登录态由 `POST /api/auth/login` 建立，见 [monorepo.md](monorepo.md) §21。
 
 ### 4.2 会话
 
@@ -346,21 +360,23 @@ data: [DONE]
 
 ### 4.5 错误码
 
-| 场景                                    | 状态码 | message                                                         |
-| --------------------------------------- | ------ | --------------------------------------------------------------- |
-| 会话不存在                              | 404    | `会话不存在`                                                    |
-| 模型不存在/已下线                       | 404    | `模型不存在或已下线`                                            |
-| `content` 为空或超长                    | 400    | 校验管道给出的提示                                              |
-| 分页锚点不属于该会话                    | 400    | `分页锚点无效`                                                  |
-| 没有可用的模型                          | 503    | `尚未配置可用的 AI 模型，请在数据库的 AiModel 表中新增一条记录` |
-| 上游 400                                | 400    | 透传上游 `error.message`                                        |
-| 上游 401 / 403                          | 502    | `AI 上游鉴权失败，请检查该模型的 apiKey`                        |
-| 上游 404                                | 502    | `AI 上游地址错误，请检查该模型的 baseUrl`                       |
-| 上游 429                                | 429    | `AI 上游限流，请稍后重试`                                       |
-| 上游 5xx / 网络错误 / 连接超时（15s）   | 502    | `AI 上游服务异常` / `AI 上游连接失败` / `AI 上游连接超时`       |
-| 上游返回 200 但不是 `text/event-stream` | 502    | `AI 上游返回非 SSE 响应，请检查 baseUrl 是否为 OpenAI 兼容接口` |
+HTTP 状态统一为 200，错误看 `status.code`：
 
-以上错误都发生在写响应头之前，返回统一 JSON。
+| 场景                                    | status.code | message                                                         |
+| --------------------------------------- | ----------- | --------------------------------------------------------------- |
+| 会话不存在                              | 404         | `会话不存在`                                                    |
+| 模型不存在/已下线                       | 404         | `模型不存在或已下线`                                            |
+| `content` 为空或超长                    | 400         | 校验管道给出的提示                                              |
+| 分页锚点不属于该会话                    | 400         | `分页锚点无效`                                                  |
+| 没有可用的模型                          | 503         | `尚未配置可用的 AI 模型，请在数据库的 AiModel 表中新增一条记录` |
+| 上游 400                                | 400         | 透传上游 `error.message`                                        |
+| 上游 401 / 403                          | 502         | `AI 上游鉴权失败，请检查该模型的 apiKey`                        |
+| 上游 404                                | 502         | `AI 上游地址错误，请检查该模型的 baseUrl`                       |
+| 上游 429                                | 429         | `AI 上游限流，请稍后重试`                                       |
+| 上游 5xx / 网络错误 / 连接超时（15s）   | 502         | `AI 上游服务异常` / `AI 上游连接失败` / `AI 上游连接超时`       |
+| 上游返回 200 但不是 `text/event-stream` | 502         | `AI 上游返回非 SSE 响应，请检查 baseUrl 是否为 OpenAI 兼容接口` |
+
+以上错误都发生在写响应头之前，返回 HTTP 200 + 统一信封 JSON；SSE 成功响应本身不包信封。
 
 补充约定：
 
@@ -435,13 +451,13 @@ POST /api/chat/completions
 - 密钥安全：`apiKey` 目前**明文**存库（与 Prisma 默认一致），接口与日志都不会输出；
   后续可加 `ENCRYPTION_KEY` 做 AES 加密（见"非目标"）。
 - 代理部署：SSE 需要关掉缓冲（已返回 `X-Accel-Buffering: no`，nginx 侧也可 `proxy_buffering off`）。
-- 鉴权：`/api/chat/*` 需要登录（Nest 全局 `JwtAuthGuard` + httpOnly cookie）；浏览器侧请求必须带 `credentials: 'include'`（`src/utils/api.ts` 的 `apiFetch` 已处理）。
+- 鉴权：`/api/chat/*` 需要登录（Nest 全局 `JwtAuthGuard` + httpOnly cookie）；浏览器侧 JSON 请求统一走 `src/utils/api.ts` 的 axios `request`（已默认 `withCredentials: true`），SSE 后续用 `fetch-event-source` 单独实现。
 
 ---
 
 ## 八、前端接入
 
-`EventSource` 只支持 GET，无法带 JSON body，因此必须用 `fetch` + 流式读取：
+`EventSource` 只支持 GET，无法带 JSON body；SSE 需要支持 POST + 自定义请求头，当前项目尚未接入前端流式 UI，后续计划使用 `fetch-event-source`。下面保留原始 `fetch` 读取逻辑，作为协议与帧解析说明：
 
 ```ts
 const response = await fetch(`${API_BASE_URL}/api/chat/completions`, {
@@ -527,7 +543,7 @@ apps/frontend/src/components/settings/
 2. `curl -N` 能看到逐帧输出、总耗时约等于上游生成时间（无整体缓冲），末尾 `data: [DONE]`。
 3. 客户端中断（`curl --max-time 1`）后上游连接关闭，数据库里该 assistant 消息 `status=aborted` 且保留已生成内容。
 4. 会话列表有 `messageCount` 与 `lastMessage`；历史接口按游标翻页且 `hasMore` 正确；删除会话后消息级联删除。
-5. 无可用模型 → 503；上游 401 → 502；上游返回非 SSE → 502；会话不存在 → 404。
+5. 无可用模型 → `status.code=503`；上游 401 → 502；上游返回非 SSE → 502；会话不存在 → 404（HTTP 均为 200）。
 6. 头像 → 设置 → 模型：能新增 / 编辑 / 删除 / 设为默认 / 启用停用；密钥只显示掩码，编辑留空不改密钥；刷新后配置仍在。
 7. `pnpm lint` / `pnpm typecheck` / `pnpm build` 全绿。
 

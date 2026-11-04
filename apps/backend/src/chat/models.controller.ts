@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common'
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common'
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { CreateAiModelDto } from './dto/create-ai-model.dto.js'
 import { UpdateAiModelDto } from './dto/update-ai-model.dto.js'
 import { ModelsService, type ModelConfig, type ModelSummary } from './models.service.js'
@@ -24,8 +24,9 @@ export class ModelsController {
   }
 
   @Post('models')
+  @HttpCode(200)
   @ApiOperation({ summary: '新增模型配置' })
-  @ApiCreatedResponse({ description: '创建成功，返回掩码后的配置' })
+  @ApiOkResponse({ description: '创建成功，返回掩码后的配置' })
   create(@Body() dto: CreateAiModelDto): Promise<ModelConfig> {
     return this.modelsService.create(dto)
   }

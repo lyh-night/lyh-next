@@ -1,12 +1,13 @@
 import { Logger, ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { NestFactory } from '@nestjs/core'
+import { NestFactory, Reflector } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import cookieParser from 'cookie-parser'
 import { AppModule } from './app.module.js'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js'
+import { TransformInterceptor } from './common/interceptors/transform.interceptor.js'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
@@ -38,7 +39,7 @@ async function bootstrap() {
   )
 
   app.useGlobalFilters(new HttpExceptionFilter())
-  app.useGlobalInterceptors(new LoggingInterceptor())
+  app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor(app.get(Reflector)))
 
   const corsOrigins = (config.get<string>('CORS_ORIGINS') ?? 'http://localhost:3000')
     .split(',')

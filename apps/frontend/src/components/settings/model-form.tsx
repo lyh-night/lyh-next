@@ -111,8 +111,8 @@ export default function ModelForm({ initial, onSaved, onCancel }: Props) {
         toast.success('模型已添加')
       }
       onSaved()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : '保存失败，请稍后重试')
+    } catch {
+      // 错误已由 request 统一提示
     } finally {
       setSaving(false)
     }

@@ -53,6 +53,7 @@
 
 ## 工具库
 
+- axios（前端统一 JSON 请求，`apps/frontend/src/utils/api.ts`）
 - ahooks
 - lodash-es
 - clsx

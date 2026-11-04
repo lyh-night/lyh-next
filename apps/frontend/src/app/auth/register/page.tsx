@@ -22,7 +22,7 @@ import {
 } from '@lyh-next/components'
 
 import { toast } from 'sonner'
-import { apiFetch } from '@/utils/api'
+import { request } from '@/utils/api'
 
 const formSchema = z
   .object({
@@ -59,28 +59,23 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const response = await apiFetch('/api/auth/register', {
+      await request({
+        url: '/api/auth/register',
         method: 'POST',
-        body: JSON.stringify({
+        data: {
           email: values.email,
           password: values.password,
-        }),
+        },
+        skipAuthRedirect: true,
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        const message = Array.isArray(data.message) ? data.message[0] : data.message
-        toast.error(message || data.error || '注册失败')
-      } else {
-        toast.success('注册成功！正在跳转到登录页面...')
-        // 2秒后跳转到登录页
-        setTimeout(() => {
-          router.push('/auth/login')
-        }, 2000)
-      }
-    } catch (err) {
-      toast.error('注册失败，请稍后重试')
+      toast.success('注册成功！正在跳转到登录页面...')
+      // 2秒后跳转到登录页
+      setTimeout(() => {
+        router.push('/auth/login')
+      }, 2000)
+    } catch {
+      // 错误已由 request 统一提示
     } finally {
       setLoading(false)
     }

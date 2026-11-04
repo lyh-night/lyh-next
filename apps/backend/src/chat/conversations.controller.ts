@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common'
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { ConversationsService } from './conversations.service.js'
 import { ChatHistoryDto } from './dto/chat-history.dto.js'
 import { CreateConversationDto } from './dto/create-conversation.dto.js'
@@ -12,8 +12,9 @@ export class ConversationsController {
   constructor(private readonly conversationsService: ConversationsService) {}
 
   @Post('conversations')
+  @HttpCode(200)
   @ApiOperation({ summary: '新建会话' })
-  @ApiCreatedResponse({ description: '返回会话元信息' })
+  @ApiOkResponse({ description: '返回会话元信息' })
   create(@Body() dto: CreateConversationDto) {
     return this.conversationsService.create(dto)
   }
