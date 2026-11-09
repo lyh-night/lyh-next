@@ -42,6 +42,7 @@ apps/backend         →  独立 NestJS API（不依赖 packages/*）
 - [AI 对话接口](docs/chat.md) — chat 模块、数据库模型配置、多轮记忆与 SSE 协议
 - [登录认证](docs/auth.md) — Nest 托管会话、cookie 规格、全局守卫与前端会话状态
 - NestJS 规范 skill（`.agent/skills/`）：`nestjs-architecture`（模块与 DI）、`nestjs-api-contract`（信封与 DTO）、`nestjs-config-env`（环境变量）、`nestjs-error-handling`（过滤器与日志）；修改后端前按任务加载对应 skill
+- 官方通用 skill（`.agent/skills/`，来自 [anthropics/skills](https://github.com/anthropics/skills)，保留原 LICENSE）：`webapp-testing`（Playwright 验证前端，需 python3 + playwright）、`frontend-design`（UI 视觉设计）、`skill-creator`（创建/维护 skill，含校验脚本）
 
 ---
 
