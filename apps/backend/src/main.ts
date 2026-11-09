@@ -1,23 +1,17 @@
 import { Logger, ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { NestFactory, Reflector } from '@nestjs/core'
+import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import cookieParser from 'cookie-parser'
 import { AppModule } from './app.module.js'
-import { HttpExceptionFilter } from './common/filters/http-exception.filter.js'
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js'
-import { TransformInterceptor } from './common/interceptors/transform.interceptor.js'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
   const config = app.get(ConfigService)
   const logger = new Logger('Bootstrap')
 
-  // 缺少签名密钥时直接失败，避免带着可伪造的会话启动
-  if (!config.get<string>('AUTH_SECRET')) {
-    throw new Error('缺少 AUTH_SECRET 环境变量，请在 apps/backend/.env 中配置')
-  }
+  // 必填环境变量（AUTH_SECRET / DATABASE_URL 等）由 ConfigModule 的 validateEnv 启动期校验
 
   // 统一 API 前缀：业务路由、健康检查与文档都挂在 /api 下
   app.setGlobalPrefix('api')
@@ -28,20 +22,19 @@ async function bootstrap() {
   // 对话接口的请求体可能较长，放宽 JSON 体积上限（默认 100kb）
   app.useBodyParser('json', { limit: '2mb' })
 
-  // DTO 校验：剥离未声明字段并做类型转换
+  // DTO 校验：剥离未声明字段；数字字段靠 DTO 上的 @Type 显式转换
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
-      transformOptions: { enableImplicitConversion: true },
     }),
   )
 
-  app.useGlobalFilters(new HttpExceptionFilter())
-  app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor(app.get(Reflector)))
+  // 全局过滤器与拦截器在 CommonModule 以 APP_FILTER / APP_INTERCEPTOR 注册
 
-  const corsOrigins = (config.get<string>('CORS_ORIGINS') ?? 'http://localhost:3000')
+  const corsOrigins = config
+    .getOrThrow<string>('CORS_ORIGINS')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean)
@@ -64,7 +57,7 @@ async function bootstrap() {
     .build()
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig))
 
-  const port = Number(config.get<string>('PORT') ?? 3001)
+  const port = config.getOrThrow<number>('PORT')
   await app.listen(port)
 
   logger.log(`API 已启动: http://localhost:${port}/api`)

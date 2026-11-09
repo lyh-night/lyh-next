@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
 import { IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from 'class-validator'
 
 export class ChatHistoryDto {
@@ -9,6 +10,8 @@ export class ChatHistoryDto {
 
   @ApiPropertyOptional({ description: '每页条数', default: 50, minimum: 1, maximum: 200 })
   @IsOptional()
+  // query 参数是字符串，必须显式转换后才能通过 @IsInt 校验
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(200)

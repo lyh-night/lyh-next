@@ -3,15 +3,7 @@ import * as bcrypt from 'bcryptjs'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { RegisterDto } from './dto/register.dto.js'
 import type { VerifyCredentialsDto } from './dto/verify-credentials.dto.js'
-
-export interface AuthUser {
-  id: string
-  email: string
-  name: string | null
-  image: string | null
-  hasAccess: boolean
-  role: string
-}
+import type { AuthUser } from './auth.types.js'
 
 @Injectable()
 export class AuthService {

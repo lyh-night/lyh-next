@@ -11,5 +11,6 @@
   "tailwindCSS.experimental.configFile": {
     "apps/frontend/src/styles/index.css": ["apps/frontend/**", "packages/components/**"]
   },
-  "tailwindCSS.classFunctions": ["cn", "cva", "clsx", "twMerge"]
+  "tailwindCSS.classFunctions": ["cn", "cva", "clsx", "twMerge"],
+  "tailwindCSS.lint.cssConflict": "ignore"
 }

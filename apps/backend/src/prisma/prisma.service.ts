@@ -1,19 +1,20 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../generated/prisma/client.js'
 
 /**
  * Prisma 客户端（Nest 生命周期托管）。
- * 连接串来自 DATABASE_URL，由 @nestjs/config 在模块初始化前载入。
+ * 连接串来自 DATABASE_URL，由 ConfigModule 启动期校验保证存在。
  */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name)
 
-  constructor() {
+  constructor(config: ConfigService) {
     super({
       adapter: new PrismaPg({
-        connectionString: process.env.DATABASE_URL,
+        connectionString: config.getOrThrow<string>('DATABASE_URL'),
       }),
     })
   }

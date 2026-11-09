@@ -1,20 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Reflector } from '@nestjs/core'
-import type { Request } from 'express'
 import { IS_PUBLIC_KEY } from './public.decorator.js'
 import { TokenService } from './token.service.js'
-
-export interface AuthUserPayload {
-  id: string
-  email: string
-  role: string
-  hasAccess: boolean
-}
-
-export interface AuthRequest extends Request {
-  user?: AuthUserPayload
-}
+import type { AuthRequest } from './auth.types.js'
 
 /**
  * 全局登录守卫：
@@ -34,8 +23,8 @@ export class JwtAuthGuard implements CanActivate {
     private readonly tokenService: TokenService,
     config: ConfigService,
   ) {
-    this.cookieName = config.get<string>('AUTH_COOKIE_NAME') ?? 'auth_token'
-    this.isProduction = config.get<string>('NODE_ENV') === 'production'
+    this.cookieName = config.getOrThrow<string>('AUTH_COOKIE_NAME')
+    this.isProduction = config.getOrThrow<string>('NODE_ENV') === 'production'
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

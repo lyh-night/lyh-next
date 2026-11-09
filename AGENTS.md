@@ -41,6 +41,7 @@ apps/backend         →  独立 NestJS API（不依赖 packages/*）
 - [Monorepo 方案](docs/monorepo.md) — 包边界、迁移映射、配置改造与验收标准
 - [AI 对话接口](docs/chat.md) — chat 模块、数据库模型配置、多轮记忆与 SSE 协议
 - [登录认证](docs/auth.md) — Nest 托管会话、cookie 规格、全局守卫与前端会话状态
+- NestJS 规范 skill（`.agent/skills/`）：`nestjs-architecture`（模块与 DI）、`nestjs-api-contract`（信封与 DTO）、`nestjs-config-env`（环境变量）、`nestjs-error-handling`（过滤器与日志）；修改后端前按任务加载对应 skill
 
 ---
 
@@ -64,7 +65,7 @@ apps/backend         →  独立 NestJS API（不依赖 packages/*）
 - 仓库结构：`apps/frontend`（Next.js）、`apps/backend`（NestJS）、`packages/components`、`packages/utils`
 - 应用框架：Next.js 15 App Router（`apps/frontend`）
 - 后端框架：NestJS 12 + Express（`apps/backend`，ESM，独立 tsconfig，端口 3001，所有路由带 `/api` 前缀）
-- 后端基础设施：`@nestjs/config` 环境变量、全局 `ValidationPipe`、`TransformInterceptor` + `HttpExceptionFilter` 统一响应 `{ status: { code, message }, data, stack }`（JSON 接口 HTTP 统一 200，`code=0` 成功）、`LoggingInterceptor`、`GET /api/health`、`/api/docs`（Swagger）、`PrismaModule`（全局）、`AuthModule`
+- 后端基础设施：`@nestjs/config` + `common/config/env.validation.ts` 启动期校验环境变量（缺 `AUTH_SECRET` / `DATABASE_URL` 直接失败，默认值集中声明）、全局 `ValidationPipe`（query 数字字段用 `@Type` 显式转换）、`CommonModule` 以 `APP_FILTER` / `APP_INTERCEPTOR` 注册全局过滤器与拦截器、`TransformInterceptor` + `HttpExceptionFilter` 统一响应 `{ status: { code, message }, data, stack }`（JSON 接口 HTTP 统一 200，`code=0` 成功）、`LoggingInterceptor`、`GET /api/health`、`/api/docs`（Swagger）、`PrismaModule`（全局）、`AuthModule`
 - 前端调用后端：浏览器侧统一走 `src/utils/api.ts` 的 axios `request`（`baseURL` 取 `NEXT_PUBLIC_API_URL`，`withCredentials`），服务端用 `BACKEND_URL`
 - 认证方案：**Nest 托管**。`POST /api/auth/login` 校验后写 httpOnly JWT cookie（`AUTH_SECRET`，默认 7 天），`GET /api/auth/me` 返回当前用户，`POST /api/auth/logout` 清除；后端全局 `JwtAuthGuard` 默认要求登录，公开路由用 `@Public()` 显式声明。**前端已移除 next-auth**，`src/provider/session-provider.tsx` 只做会话状态展示；`middleware.ts` 只判断会话 cookie 是否存在（Edge 构建期无法安全读 secret），cookie 失效时由 `SessionProvider` 收到 `status.code=401` 后跳回登录页
 - AI 对话：`apps/backend/src/chat`，`POST /api/chat/completions` 为 OpenAI 协议 SSE（逐帧透传上游，成功响应不包统一信封）；模型配置（baseUrl/apiKey/model/provider）存数据库 `AiModel` 表，**不走环境变量**，由前端「头像 → 设置 → 模型」弹窗维护（`/api/chat/models/configs` 等接口，密钥只返回掩码）；多轮记忆与历史都在后端（表 `Conversation` / `ChatMessage`）

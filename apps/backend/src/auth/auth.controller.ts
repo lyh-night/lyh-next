@@ -2,10 +2,10 @@ import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import type { CookieOptions, Response } from 'express'
-import { AuthService, type AuthUser } from './auth.service.js'
+import { AuthService } from './auth.service.js'
+import type { AuthRequest, AuthUser } from './auth.types.js'
 import { RegisterDto } from './dto/register.dto.js'
 import { VerifyCredentialsDto } from './dto/verify-credentials.dto.js'
-import type { AuthRequest } from './jwt-auth.guard.js'
 import { Public } from './public.decorator.js'
 import { TokenService } from './token.service.js'
 
@@ -20,11 +20,11 @@ export class AuthController {
     private readonly tokenService: TokenService,
     config: ConfigService,
   ) {
-    this.cookieName = config.get<string>('AUTH_COOKIE_NAME') ?? 'auth_token'
+    this.cookieName = config.getOrThrow<string>('AUTH_COOKIE_NAME')
     this.cookieOptions = {
       httpOnly: true,
       sameSite: 'lax',
-      secure: config.get<string>('NODE_ENV') === 'production',
+      secure: config.getOrThrow<string>('NODE_ENV') === 'production',
       path: '/',
       maxAge: this.tokenService.ttlSeconds * 1000,
     }
