@@ -141,30 +141,22 @@ VALUES
 
 ## 四、接口契约
 
-所有接口挂在 `/api/chat` 下，**除 `GET /api/health` 等公开路由外都需要登录**（未登录时 HTTP 200 + `status.code=401`）。
+所有接口挂在 `/api/chat` 下，**除 `GET /api/health` 等公开路由外都需要登录**（未登录时 HTTP 200 + `code=10002`）。
 
 响应统一为：
 
 ```json
-{
-  "status": { "code": 0, "message": "" },
-  "data": {},
-  "stack": []
-}
+{ "code": 0, "message": "", "data": {} }
 ```
 
-- 成功 `status.code=0`，业务失败 `status.code` 为 400/404/429/500 等；HTTP 状态统一为 200。
-- `data` 失败时为 `null`；`stack` 为后端调用栈，成功时为 `[]`。
+- 成功 `code=0`，业务失败 `code` 为业务码（如 `30001` 会话不存在、`30009` 上游限流）；HTTP 状态统一为 200。
+- `data` 失败时为 `null`；`stack` 仅在未预期异常（`code=10000`）且非生产环境返回。
 - 下文示例只展示 `data` 内容；SSE 成功响应本身是 `text/event-stream`，不包信封。
 
 业务失败示例（HTTP 仍为 200）：
 
 ```json
-{
-  "status": { "code": 400, "message": "..." },
-  "data": null,
-  "stack": ["BadRequestException: ...", "    at ..."]
-}
+{ "code": 30001, "message": "会话不存在", "data": null }
 ```
 
 ### 4.1 模型列表与配置管理
@@ -241,7 +233,7 @@ VALUES
 - `baseUrl` 保存时去掉末尾 `/`，后端调用时拼接 `/chat/completions`。
 - 校验：`baseUrl` 必须是 http(s) 地址（允许 localhost）、`apiKey` 新建必填、`displayName`/`model` 非空。
 
-> 这些接口与其它 `/api/chat/*` 一样**需要登录**（Nest 全局守卫校验 httpOnly 会话 cookie，未登录时 HTTP 200 + `status.code=401`）。登录态由 `POST /api/auth/login` 建立，见 [monorepo.md](monorepo.md) §21。
+> 这些接口与其它 `/api/chat/*` 一样**需要登录**（Nest 全局守卫校验 httpOnly 会话 cookie，未登录时 HTTP 200 + `code=10002`）。登录态由 `POST /api/auth/login` 建立，见 [monorepo.md](monorepo.md) §21。
 
 ### 4.2 会话
 
@@ -360,21 +352,21 @@ data: [DONE]
 
 ### 4.5 错误码
 
-HTTP 状态统一为 200，错误看 `status.code`：
+HTTP 状态统一为 200，错误看 `code`（业务码，见 [err-handing.md](err-handing.md) §6.2）：
 
-| 场景                                    | status.code | message                                                         |
-| --------------------------------------- | ----------- | --------------------------------------------------------------- |
-| 会话不存在                              | 404         | `会话不存在`                                                    |
-| 模型不存在/已下线                       | 404         | `模型不存在或已下线`                                            |
-| `content` 为空或超长                    | 400         | 校验管道给出的提示                                              |
-| 分页锚点不属于该会话                    | 400         | `分页锚点无效`                                                  |
-| 没有可用的模型                          | 503         | `尚未配置可用的 AI 模型，请在数据库的 AiModel 表中新增一条记录` |
-| 上游 400                                | 400         | 透传上游 `error.message`                                        |
-| 上游 401 / 403                          | 502         | `AI 上游鉴权失败，请检查该模型的 apiKey`                        |
-| 上游 404                                | 502         | `AI 上游地址错误，请检查该模型的 baseUrl`                       |
-| 上游 429                                | 429         | `AI 上游限流，请稍后重试`                                       |
-| 上游 5xx / 网络错误 / 连接超时（15s）   | 502         | `AI 上游服务异常` / `AI 上游连接失败` / `AI 上游连接超时`       |
-| 上游返回 200 但不是 `text/event-stream` | 502         | `AI 上游返回非 SSE 响应，请检查 baseUrl 是否为 OpenAI 兼容接口` |
+| 场景                                    | code          | message                                                         |
+| --------------------------------------- | ------------- | --------------------------------------------------------------- |
+| 会话不存在                              | 30001         | `会话不存在`                                                    |
+| 模型不存在/已下线                       | 30002         | `模型不存在或已下线`                                            |
+| `content` 为空或超长                    | 30004 / 10001 | `content 不能为空` / 校验管道给出的提示                         |
+| 分页锚点不属于该会话                    | 30005         | `分页锚点无效`                                                  |
+| 没有可用的模型                          | 30003         | `尚未配置可用的 AI 模型，请在数据库的 AiModel 表中新增一条记录` |
+| 上游 400                                | 30006         | 透传上游 `error.message`                                        |
+| 上游 401 / 403                          | 30007         | `AI 上游鉴权失败，请检查该模型的 apiKey`                        |
+| 上游 404                                | 30008         | `AI 上游地址错误，请检查该模型的 baseUrl`                       |
+| 上游 429                                | 30009         | `AI 上游限流，请稍后重试`                                       |
+| 上游 5xx / 网络错误 / 连接超时（15s）   | 30010         | `AI 上游服务异常` / `AI 上游连接失败` / `AI 上游连接超时`       |
+| 上游返回 200 但不是 `text/event-stream` | 30011         | `AI 上游返回非 SSE 响应，请检查 baseUrl 是否为 OpenAI 兼容接口` |
 
 以上错误都发生在写响应头之前，返回 HTTP 200 + 统一信封 JSON；SSE 成功响应本身不包信封。
 
@@ -543,7 +535,7 @@ apps/frontend/src/components/settings/
 2. `curl -N` 能看到逐帧输出、总耗时约等于上游生成时间（无整体缓冲），末尾 `data: [DONE]`。
 3. 客户端中断（`curl --max-time 1`）后上游连接关闭，数据库里该 assistant 消息 `status=aborted` 且保留已生成内容。
 4. 会话列表有 `messageCount` 与 `lastMessage`；历史接口按游标翻页且 `hasMore` 正确；删除会话后消息级联删除。
-5. 无可用模型 → `status.code=503`；上游 401 → 502；上游返回非 SSE → 502；会话不存在 → 404（HTTP 均为 200）。
+5. 无可用模型 → `code=30003`；上游 401 → `30007`；上游返回非 SSE → `30011`；会话不存在 → `30001`（HTTP 均为 200）。
 6. 头像 → 设置 → 模型：能新增 / 编辑 / 删除 / 设为默认 / 启用停用；密钥只显示掩码，编辑留空不改密钥；刷新后配置仍在。
 7. `pnpm lint` / `pnpm typecheck` / `pnpm build` 全绿。
 

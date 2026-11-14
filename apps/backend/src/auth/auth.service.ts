@@ -1,5 +1,7 @@
-import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
+import { HttpStatus, Injectable, Logger } from '@nestjs/common'
 import * as bcrypt from 'bcryptjs'
+import { ApiCode } from '../common/errors/api-code.js'
+import { ApiException } from '../common/errors/api.exception.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { RegisterDto } from './dto/register.dto.js'
 import type { VerifyCredentialsDto } from './dto/verify-credentials.dto.js'
@@ -15,7 +17,7 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } })
     if (existing) {
-      throw new ConflictException('该邮箱已被注册')
+      throw new ApiException(ApiCode.AUTH_EMAIL_TAKEN, '该邮箱已被注册', HttpStatus.CONFLICT)
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10)
@@ -39,12 +41,20 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } })
 
     if (!user?.password) {
-      throw new UnauthorizedException('邮箱或密码错误')
+      throw new ApiException(
+        ApiCode.AUTH_INVALID_CREDENTIALS,
+        '邮箱或密码错误',
+        HttpStatus.UNAUTHORIZED,
+      )
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password)
     if (!isPasswordValid) {
-      throw new UnauthorizedException('邮箱或密码错误')
+      throw new ApiException(
+        ApiCode.AUTH_INVALID_CREDENTIALS,
+        '邮箱或密码错误',
+        HttpStatus.UNAUTHORIZED,
+      )
     }
 
     return {
@@ -64,7 +74,10 @@ export class AuthService {
       select: { id: true, email: true, name: true, image: true, hasAccess: true, role: true },
     })
 
-    if (!user) throw new UnauthorizedException('用户不存在或已被删除')
+    // 会话失效统一用 10002：前端只认这一个「回登录页」信号
+    if (!user) {
+      throw new ApiException(ApiCode.UNAUTHORIZED, '用户不存在或已被删除', HttpStatus.UNAUTHORIZED)
+    }
 
     return user
   }

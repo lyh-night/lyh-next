@@ -1,12 +1,6 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common'
+import { BadRequestException, HttpStatus, Injectable, Logger } from '@nestjs/common'
+import { ApiCode } from '../common/errors/api-code.js'
+import { ApiException } from '../common/errors/api.exception.js'
 import type { AiModel } from '../generated/prisma/client.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { ChatCompletionDto } from './dto/chat-completion.dto.js'
@@ -53,7 +47,9 @@ export class ChatService {
    */
   async prepareTurn(dto: ChatCompletionDto): Promise<PreparedTurn> {
     const content = dto.content.trim()
-    if (!content) throw new BadRequestException('content 不能为空')
+    if (!content) {
+      throw new ApiException(ApiCode.CHAT_CONTENT_EMPTY, 'content 不能为空', HttpStatus.BAD_REQUEST)
+    }
 
     const conversation = dto.conversationId
       ? await this.requireConversation(dto.conversationId)
@@ -138,20 +134,37 @@ export class ChatService {
         signal: combined,
       })
     } catch {
-      if (controller.signal.aborted) throw new BadGatewayException('AI 上游连接超时')
+      // 客户端已断开时响应无处可写，保留标准异常即可（兜底为 10001）
       if (signal.aborted) throw new BadRequestException('客户端已断开')
-      throw new BadGatewayException('AI 上游连接失败')
+      if (controller.signal.aborted) {
+        throw new ApiException(
+          ApiCode.CHAT_UPSTREAM_ERROR,
+          'AI 上游连接超时',
+          HttpStatus.BAD_GATEWAY,
+        )
+      }
+      throw new ApiException(ApiCode.CHAT_UPSTREAM_ERROR, 'AI 上游连接失败', HttpStatus.BAD_GATEWAY)
     } finally {
       clearTimeout(timeout)
     }
 
-    if (!response.ok) throw await this.mapUpstreamError(response)
+    if (!response.ok) return await this.throwUpstreamError(response)
 
     const contentType = response.headers.get('content-type') ?? ''
     if (!contentType.includes('text/event-stream')) {
-      throw new BadGatewayException('AI 上游返回非 SSE 响应，请检查 baseUrl 是否为 OpenAI 兼容接口')
+      throw new ApiException(
+        ApiCode.CHAT_UPSTREAM_NOT_SSE,
+        'AI 上游返回非 SSE 响应，请检查 baseUrl 是否为 OpenAI 兼容接口',
+        HttpStatus.BAD_GATEWAY,
+      )
     }
-    if (!response.body) throw new BadGatewayException('AI 上游未返回数据流')
+    if (!response.body) {
+      throw new ApiException(
+        ApiCode.CHAT_UPSTREAM_NOT_SSE,
+        'AI 上游未返回数据流',
+        HttpStatus.BAD_GATEWAY,
+      )
+    }
 
     return response.body
   }
@@ -191,7 +204,13 @@ export class ChatService {
       where: { id },
       select: { id: true, modelId: true, systemPrompt: true },
     })
-    if (!conversation) throw new NotFoundException('会话不存在')
+    if (!conversation) {
+      throw new ApiException(
+        ApiCode.CHAT_CONVERSATION_NOT_FOUND,
+        '会话不存在',
+        HttpStatus.NOT_FOUND,
+      )
+    }
     return conversation
   }
 
@@ -202,7 +221,13 @@ export class ChatService {
         where: { id: modelId, isActive: true },
         select: { id: true },
       })
-      if (!model) throw new NotFoundException('模型不存在或已下线')
+      if (!model) {
+        throw new ApiException(
+          ApiCode.CHAT_MODEL_NOT_FOUND,
+          '模型不存在或已下线',
+          HttpStatus.NOT_FOUND,
+        )
+      }
       resolvedModelId = model.id
     }
 
@@ -215,7 +240,8 @@ export class ChatService {
     })
   }
 
-  private async mapUpstreamError(response: Response): Promise<HttpException> {
+  /** 把上游非 2xx 响应翻译成带业务码的异常（写响应头之前抛出） */
+  private async throwUpstreamError(response: Response): Promise<never> {
     let detail = ''
     try {
       detail = (await response.text()).slice(0, UPSTREAM_ERROR_DETAIL_CHARS)
@@ -228,19 +254,31 @@ export class ChatService {
 
     if (response.status === HttpStatus.BAD_REQUEST) {
       const message = this.extractErrorMessage(detail) ?? 'AI 上游拒绝了该请求'
-      return new BadRequestException(message)
+      throw new ApiException(ApiCode.CHAT_UPSTREAM_REJECTED, message, HttpStatus.BAD_REQUEST)
     }
     if (response.status === HttpStatus.UNAUTHORIZED || response.status === HttpStatus.FORBIDDEN) {
-      return new BadGatewayException('AI 上游鉴权失败，请检查该模型的 apiKey')
+      throw new ApiException(
+        ApiCode.CHAT_UPSTREAM_AUTH,
+        'AI 上游鉴权失败，请检查该模型的 apiKey',
+        HttpStatus.BAD_GATEWAY,
+      )
     }
     if (response.status === HttpStatus.NOT_FOUND) {
-      return new BadGatewayException('AI 上游地址错误，请检查该模型的 baseUrl')
+      throw new ApiException(
+        ApiCode.CHAT_UPSTREAM_NOT_FOUND,
+        'AI 上游地址错误，请检查该模型的 baseUrl',
+        HttpStatus.BAD_GATEWAY,
+      )
     }
     if (response.status === HttpStatus.TOO_MANY_REQUESTS) {
-      return new HttpException('AI 上游限流，请稍后重试', HttpStatus.TOO_MANY_REQUESTS)
+      throw new ApiException(
+        ApiCode.CHAT_UPSTREAM_RATE_LIMITED,
+        'AI 上游限流，请稍后重试',
+        HttpStatus.TOO_MANY_REQUESTS,
+      )
     }
 
-    return new BadGatewayException('AI 上游服务异常')
+    throw new ApiException(ApiCode.CHAT_UPSTREAM_ERROR, 'AI 上游服务异常', HttpStatus.BAD_GATEWAY)
   }
 
   private extractErrorMessage(detail: string): string | undefined {

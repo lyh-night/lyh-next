@@ -70,7 +70,7 @@ export default function SessionProvider({ children }: { children: React.ReactNod
     }
   }, [pathname, refresh])
 
-  // 任意受保护接口返回 status.code=401 时同步会话状态；跳转仍由下方 effect 统一处理
+  // 任意受保护接口返回 code=10002（会话失效）时同步会话状态；跳转仍由下方 effect 统一处理
   useEffect(() => {
     return onUnauthorized(() => {
       setUser(null)
@@ -79,7 +79,7 @@ export default function SessionProvider({ children }: { children: React.ReactNod
     })
   }, [pathname])
 
-  // cookie 过期或失效时（/me 返回 status.code=401），把用户送回登录页
+  // cookie 过期或失效时（/me 返回 code=10002），把用户送回登录页
   useEffect(() => {
     // 只对"当前路由的检查结果"生效，避免沿用上一个页面的状态
     if (checkedPath !== pathname) return

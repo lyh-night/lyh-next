@@ -977,19 +977,19 @@ CMD ["node", "apps/frontend/server.js"]
 
 ### 19.3 运行时基础设施
 
-| 能力     | 实现                                                                                                                                                      | 位置                                      |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| 配置     | `@nestjs/config`，`isGlobal`、`cache`，env 优先级 `.env.local` → `.env`；`validateEnv` 启动期校验（缺必填变量直接失败，默认值集中在 `env.validation.ts`） | `app.module.ts`、`common/config/`         |
-| 全局前缀 | `app.setGlobalPrefix('api')`                                                                                                                              | `main.ts`                                 |
-| 参数校验 | 全局 `ValidationPipe`（`whitelist` + `transform` + `forbidNonWhitelisted`），query 数字字段用 DTO `@Type` 显式转换                                        | `main.ts`、`*/dto/`                       |
-| CORS     | `CORS_ORIGINS` 逗号分隔，默认 `http://localhost:3000`（校验层默认值），`credentials: true`                                                                | `main.ts`                                 |
-| 响应结构 | 全局 `TransformInterceptor` + `HttpExceptionFilter`：`{ status: { code, message }, data, stack }`；JSON 接口 HTTP 统一 200，`code=0` 成功                 | `common/interceptors/`、`common/filters/` |
-| 全局注册 | filter / interceptor 经 `CommonModule` 以 `APP_FILTER` / `APP_INTERCEPTOR` 注入（DI 顺序即执行顺序），守卫经 AuthModule `APP_GUARD`                       | `common/common.module.ts`                 |
-| 访问日志 | 全局 `LoggingInterceptor`：`METHOD path status 耗时ms`                                                                                                    | `common/interceptors/`                    |
-| 健康检查 | `GET /api/health` → `data` 为 `{ status, uptime, timestamp, version }`                                                                                    | `health/`                                 |
-| 服务信息 | `GET /api` → `data` 为 `{ name, version, environment }`                                                                                                   | `app.controller.ts`                       |
-| API 文档 | `@nestjs/swagger`，`GET /api/docs`，`addBearerAuth()` 预置                                                                                                | `main.ts`                                 |
-| 优雅关闭 | `app.enableShutdownHooks()`，响应 `SIGTERM`                                                                                                               | `main.ts`                                 |
+| 能力     | 实现                                                                                                                                                                              | 位置                                                        |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 配置     | `@nestjs/config`，`isGlobal`、`cache`，env 优先级 `.env.local` → `.env`；`validateEnv` 启动期校验（缺必填变量直接失败，默认值集中在 `env.validation.ts`）                         | `app.module.ts`、`common/config/`                           |
+| 全局前缀 | `app.setGlobalPrefix('api')`                                                                                                                                                      | `main.ts`                                                   |
+| 参数校验 | 全局 `ValidationPipe`（`whitelist` + `transform` + `forbidNonWhitelisted`），query 数字字段用 DTO `@Type` 显式转换                                                                | `main.ts`、`*/dto/`                                         |
+| CORS     | `CORS_ORIGINS` 逗号分隔，默认 `http://localhost:3000`（校验层默认值），`credentials: true`                                                                                        | `main.ts`                                                   |
+| 响应结构 | 全局 `TransformInterceptor` + `HttpExceptionFilter`：扁平信封 `{ code, message, data, stack? }`；JSON 接口 HTTP 统一 200，`code=0` 成功、失败为业务码（见 `docs/err-handing.md`） | `common/interceptors/`、`common/filters/`、`common/errors/` |
+| 全局注册 | filter / interceptor 经 `CommonModule` 以 `APP_FILTER` / `APP_INTERCEPTOR` 注入（DI 顺序即执行顺序），守卫经 AuthModule `APP_GUARD`                                               | `common/common.module.ts`                                   |
+| 访问日志 | 全局 `LoggingInterceptor`：`METHOD path http=200 code=... 耗时ms`（业务码必须进日志）                                                                                             | `common/interceptors/`                                      |
+| 健康检查 | `GET /api/health` → `data` 为 `{ status, uptime, timestamp, version }`                                                                                                            | `health/`                                                   |
+| 服务信息 | `GET /api` → `data` 为 `{ name, version, environment }`                                                                                                                           | `app.controller.ts`                                         |
+| API 文档 | `@nestjs/swagger`，`GET /api/docs`，`addBearerAuth()` 预置                                                                                                                        | `main.ts`                                                   |
+| 优雅关闭 | `app.enableShutdownHooks()`，响应 `SIGTERM`                                                                                                                                       | `main.ts`                                                   |
 
 ### 19.4 端口与路由约定
 

@@ -1,6 +1,8 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
+import { CanActivate, ExecutionContext, HttpStatus, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Reflector } from '@nestjs/core'
+import { ApiCode } from '../common/errors/api-code.js'
+import { ApiException } from '../common/errors/api.exception.js'
 import { IS_PUBLIC_KEY } from './public.decorator.js'
 import { TokenService } from './token.service.js'
 import type { AuthRequest } from './auth.types.js'
@@ -33,10 +35,14 @@ export class JwtAuthGuard implements CanActivate {
     if (this.isPublicRoute(context, request)) return true
 
     const token = this.extractToken(request)
-    if (!token) throw new UnauthorizedException('未登录或登录已过期')
+    if (!token) {
+      throw new ApiException(ApiCode.UNAUTHORIZED, '未登录或登录已过期', HttpStatus.UNAUTHORIZED)
+    }
 
     const payload = await this.tokenService.verify(token)
-    if (!payload) throw new UnauthorizedException('未登录或登录已过期')
+    if (!payload) {
+      throw new ApiException(ApiCode.UNAUTHORIZED, '未登录或登录已过期', HttpStatus.UNAUTHORIZED)
+    }
 
     request.user = {
       id: payload.sub,

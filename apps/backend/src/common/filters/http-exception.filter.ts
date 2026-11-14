@@ -1,84 +1,61 @@
-import {
-  ArgumentsHost,
-  Catch,
-  HttpException,
-  HttpStatus,
-  Logger,
-  type ExceptionFilter,
-} from '@nestjs/common'
+import { ArgumentsHost, Catch, HttpStatus, Logger, type ExceptionFilter } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import type { Request, Response } from 'express'
-import type { ApiResponse } from '../types/api-response.js'
+import { ApiCode } from '../errors/api-code.js'
+import { resolveApiCode, resolveApiMessage, shouldIncludeStack } from '../errors/api-error.js'
+import type { ApiFailure } from '../types/api-response.js'
 
 /**
- * 统一错误响应结构：
- * { status: { code, message }, data: null, stack: string[] }
+ * 全局异常过滤器（无差别捕获整条链路的异常）。
  *
- * - HTTP 状态固定 200，错误信息通过 status.code 表达；
- * - code 取 HttpException 的状态码，未预期异常统一 500；
- * - stack 为后端调用栈（按行拆分），供前端/开发者排查。
+ * 输出：`{ code, message, data: null, stack? }`，HTTP 恒为 200。
+ * - `code` 为业务码（见 api-code.ts），不是 HTTP 状态码；
+ * - `message` 为可直接展示的中文文案；
+ * - `stack` 仅未预期异常（code=10000）且非生产环境返回；
+ * - 响应已开始/已结束（SSE 等）时只记日志，不再写 JSON。
  */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name)
+  private readonly isProduction: boolean
+
+  constructor(config: ConfigService) {
+    this.isProduction = config.getOrThrow<string>('NODE_ENV') === 'production'
+  }
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<Response>()
     const request = ctx.getRequest<Request>()
 
-    const isHttpException = exception instanceof HttpException
-    const code = isHttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR
-    const message = this.resolveMessage(exception)
-    const stack = this.resolveStack(exception)
+    const code = resolveApiCode(exception)
+    const message = resolveApiMessage(exception, code)
+    const stack = shouldIncludeStack(code, this.isProduction) ? splitStack(exception) : undefined
 
-    if (!isHttpException) {
+    // 未预期异常：完整堆栈只进服务端日志，不返回给客户端（除非非生产环境由 stack 字段带回）
+    if (code === ApiCode.INTERNAL_ERROR) {
       this.logger.error(
-        `${request.method} ${request.originalUrl} 未处理异常`,
+        `${request.method} ${request.originalUrl} code=${code} 未预期异常`,
         exception instanceof Error ? exception.stack : String(exception),
       )
     }
 
-    // SSE 等已经写头的响应无法再写 JSON，只记录日志
-    if (response.headersSent) {
+    // SSE 已写头，或响应已结束/连接已销毁：无法再写 JSON
+    if (response.headersSent || response.writableEnded || response.destroyed) {
       this.logger.error(
-        `${request.method} ${request.originalUrl} 响应已开始，无法写入错误体（code=${code}）`,
+        `${request.method} ${request.originalUrl} code=${code} 响应已开始或已结束，无法写入错误体`,
       )
       return
     }
 
-    const body: ApiResponse<null> = {
-      status: { code, message },
-      data: null,
-      stack,
-    }
+    const body: ApiFailure = { code, message, data: null, ...(stack ? { stack } : {}) }
 
     response.status(HttpStatus.OK).json(body)
   }
+}
 
-  private resolveMessage(exception: unknown): string {
-    if (!(exception instanceof HttpException)) return '服务器内部错误'
+function splitStack(exception: unknown): string[] {
+  if (!(exception instanceof Error) || !exception.stack) return []
 
-    const payload = exception.getResponse()
-    let message: string | undefined
-
-    if (typeof payload === 'string') {
-      message = payload
-    } else if (payload && typeof payload === 'object') {
-      const raw = (payload as { message?: unknown }).message
-
-      if (Array.isArray(raw)) {
-        message = raw.filter((item): item is string => typeof item === 'string').join('；')
-      } else if (typeof raw === 'string') {
-        message = raw
-      }
-    }
-
-    return message?.trim() || '请求失败，请稍后重试'
-  }
-
-  private resolveStack(exception: unknown): string[] {
-    if (!(exception instanceof Error) || !exception.stack) return []
-
-    return exception.stack.split('\n').filter(Boolean)
-  }
+  return exception.stack.split('\n').filter(Boolean)
 }

@@ -67,7 +67,7 @@ export class AuthController {
 
   @Get('me')
   @ApiOperation({ summary: '当前登录用户（读取最新档案）' })
-  @ApiOkResponse({ description: '未登录时返回 status.code=401' })
+  @ApiOkResponse({ description: '返回用户档案；未登录时返回 code=10002（会话失效）' })
   async me(@Req() request: AuthRequest): Promise<{ user: AuthUser }> {
     // 守卫已保证 request.user 存在
     const user = await this.authService.profile(request.user?.id ?? '')

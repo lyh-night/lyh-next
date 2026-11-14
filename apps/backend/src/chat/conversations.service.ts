@@ -1,5 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { HttpStatus, Injectable } from '@nestjs/common'
 import { Prisma } from '../generated/prisma/client.js'
+import { ApiCode } from '../common/errors/api-code.js'
+import { ApiException } from '../common/errors/api.exception.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { ChatHistoryDto } from './dto/chat-history.dto.js'
 import type { CreateConversationDto } from './dto/create-conversation.dto.js'
@@ -115,7 +117,13 @@ export class ConversationsService {
       },
     })
 
-    if (!conversation) throw new NotFoundException('会话不存在')
+    if (!conversation) {
+      throw new ApiException(
+        ApiCode.CHAT_CONVERSATION_NOT_FOUND,
+        '会话不存在',
+        HttpStatus.NOT_FOUND,
+      )
+    }
 
     const { _count, ...rest } = conversation
     return { ...rest, messageCount: _count.messages }
@@ -149,7 +157,13 @@ export class ConversationsService {
         },
       })
     } catch (error) {
-      if (isRecordNotFound(error)) throw new NotFoundException('会话不存在')
+      if (isRecordNotFound(error)) {
+        throw new ApiException(
+          ApiCode.CHAT_CONVERSATION_NOT_FOUND,
+          '会话不存在',
+          HttpStatus.NOT_FOUND,
+        )
+      }
       throw error
     }
   }
@@ -158,7 +172,13 @@ export class ConversationsService {
     try {
       await this.prisma.conversation.delete({ where: { id } })
     } catch (error) {
-      if (isRecordNotFound(error)) throw new NotFoundException('会话不存在')
+      if (isRecordNotFound(error)) {
+        throw new ApiException(
+          ApiCode.CHAT_CONVERSATION_NOT_FOUND,
+          '会话不存在',
+          HttpStatus.NOT_FOUND,
+        )
+      }
       throw error
     }
 
@@ -174,7 +194,13 @@ export class ConversationsService {
       where: { id: dto.conversationId },
       select: { id: true },
     })
-    if (!conversation) throw new NotFoundException('会话不存在')
+    if (!conversation) {
+      throw new ApiException(
+        ApiCode.CHAT_CONVERSATION_NOT_FOUND,
+        '会话不存在',
+        HttpStatus.NOT_FOUND,
+      )
+    }
 
     const limit = dto.limit ?? 50
 
@@ -183,7 +209,9 @@ export class ConversationsService {
         where: { id: dto.messageId, conversationId: dto.conversationId },
         select: { id: true },
       })
-      if (!anchor) throw new BadRequestException('分页锚点无效')
+      if (!anchor) {
+        throw new ApiException(ApiCode.CHAT_INVALID_ANCHOR, '分页锚点无效', HttpStatus.BAD_REQUEST)
+      }
     }
 
     const rows = await this.prisma.chatMessage.findMany({
@@ -208,7 +236,13 @@ export class ConversationsService {
       where: { id: modelId, isActive: true },
       select: { id: true },
     })
-    if (!model) throw new NotFoundException('模型不存在或已下线')
+    if (!model) {
+      throw new ApiException(
+        ApiCode.CHAT_MODEL_NOT_FOUND,
+        '模型不存在或已下线',
+        HttpStatus.NOT_FOUND,
+      )
+    }
     return model
   }
 }

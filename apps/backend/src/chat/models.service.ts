@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common'
+import { HttpStatus, Injectable } from '@nestjs/common'
 import type { AiModel, Prisma } from '../generated/prisma/client.js'
+import { ApiCode } from '../common/errors/api-code.js'
+import { ApiException } from '../common/errors/api.exception.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { CreateAiModelDto } from './dto/create-ai-model.dto.js'
 import type { UpdateAiModelDto } from './dto/update-ai-model.dto.js'
@@ -119,7 +121,9 @@ export class ModelsService {
 
   async update(id: string, dto: UpdateAiModelDto): Promise<ModelConfig> {
     const exists = await this.prisma.aiModel.findUnique({ where: { id }, select: { id: true } })
-    if (!exists) throw new NotFoundException('模型不存在')
+    if (!exists) {
+      throw new ApiException(ApiCode.CHAT_MODEL_NOT_FOUND, '模型不存在', HttpStatus.NOT_FOUND)
+    }
 
     const data: Prisma.AiModelUpdateInput = {}
     if (dto.provider !== undefined) data.provider = dto.provider.trim() || null
@@ -149,7 +153,9 @@ export class ModelsService {
 
   async remove(id: string): Promise<{ success: true }> {
     const deleted = await this.prisma.aiModel.deleteMany({ where: { id } })
-    if (deleted.count === 0) throw new NotFoundException('模型不存在')
+    if (deleted.count === 0) {
+      throw new ApiException(ApiCode.CHAT_MODEL_NOT_FOUND, '模型不存在', HttpStatus.NOT_FOUND)
+    }
     return { success: true }
   }
 
@@ -165,7 +171,13 @@ export class ModelsService {
         where: { id: preferredId, isActive: true },
       })
       if (model) return model
-      if (modelId) throw new NotFoundException('模型不存在或已下线')
+      if (modelId) {
+        throw new ApiException(
+          ApiCode.CHAT_MODEL_NOT_FOUND,
+          '模型不存在或已下线',
+          HttpStatus.NOT_FOUND,
+        )
+      }
     }
 
     const fallback = await this.prisma.aiModel.findFirst({
@@ -174,8 +186,10 @@ export class ModelsService {
     })
 
     if (!fallback) {
-      throw new ServiceUnavailableException(
+      throw new ApiException(
+        ApiCode.CHAT_NO_MODEL,
         '尚未配置可用的 AI 模型，请在数据库的 AiModel 表中新增一条记录',
+        HttpStatus.SERVICE_UNAVAILABLE,
       )
     }
 
