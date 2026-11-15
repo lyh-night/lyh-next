@@ -35,4 +35,21 @@
   ::before {
     border-color: var(--color-border);
   }
+
+  /*
+   * Shiki 双主题：浅色模式用内联的 github-light 颜色，
+   * 深色模式切换到 github-dark 变量；代码块背景跟随容器（覆盖内联背景）。
+   */
+  .shiki-host pre {
+    margin: 0;
+    background-color: transparent !important;
+  }
+
+  .dark .shiki-host pre {
+    color: var(--shiki-dark) !important;
+  }
+
+  .dark .shiki-host pre span {
+    color: var(--shiki-dark) !important;
+  }
 }

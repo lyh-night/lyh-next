@@ -14,7 +14,7 @@
 
 - 一套接口支持任意 **OpenAI 兼容**的第三方平台（OpenAI、DeepSeek、Qwen、Ollama、vLLM…）。
 - 支持 **多轮对话**：记忆由后端维护，前端只发这一轮的新消息。
-- 支持 **对话历史**：会话列表、历史消息分页、删除。
+- 支持 **对话历史**：会话列表（按用户隔离）、历史消息分页、删除。
 - 响应使用 **OpenAI 协议的 SSE**（`data: {...}` + `data: [DONE]`），前端可逐字渲染。
 
 ---
@@ -86,6 +86,8 @@ model Conversation {
   id           String   @id @default(cuid())
   title        String   @default("新对话")
   systemPrompt String?
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   modelId      String?
   model        AiModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
@@ -93,6 +95,7 @@ model Conversation {
 
   messages ChatMessage[]
 
+  @@index([userId, updatedAt])
   @@index([updatedAt])
 }
 
@@ -237,13 +240,18 @@ VALUES
 
 ### 4.2 会话
 
-| 方法     | 路径                                      | 说明                                                  |
-| -------- | ----------------------------------------- | ----------------------------------------------------- |
-| `POST`   | `/api/chat/conversations`                 | `{ title?, modelId?, systemPrompt? }`，返回会话元信息 |
-| `GET`    | `/api/chat/conversations?page=1&limit=20` | 分页列表，按 `updatedAt` 倒序                         |
-| `GET`    | `/api/chat/conversations/:id`             | 会话详情（不含消息）                                  |
-| `PATCH`  | `/api/chat/conversations/:id`             | `{ title?, modelId?, systemPrompt? }`                 |
-| `DELETE` | `/api/chat/conversations/:id`             | 删除会话（级联删消息），返回 `{ success: true }`      |
+| 方法     | 路径                                      | 说明                                                                                                                                                                          |
+| -------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/chat/conversations`                 | `{ title?, modelId?, systemPrompt? }`，返回会话元信息                                                                                                                         |
+| `GET`    | `/api/chat/conversations?page=1&limit=20` | 当前用户的分页列表，按 `updatedAt` 倒序                                                                                                                                       |
+| `GET`    | `/api/chat/conversations/:id`             | 会话详情（不含消息）；只查自己的会话                                                                                                                                          |
+| `PATCH`  | `/api/chat/conversations/:id`             | `{ title?, modelId?, systemPrompt? }`；只改自己的                                                                                                                             |
+| `DELETE` | `/api/chat/conversations/:id`             | 删除会话（级联删消息）；只删自己的                                                                                                                                            |
+| `DELETE` | `/api/chat/conversations/:id/last-turn`   | 撤回最后一轮未完成的回合（重试前调用）：末尾为 aborted/error assistant 时连同其 user 删除；末尾为 user（流前失败）时只删该 user；末尾为 completed 时返回 `{ success: false }` |
+
+> 会话按登录用户隔离（`Conversation.userId`）：所有查询都带 `userId` 过滤，越权与不存在统一返回
+> `30001 会话不存在`，不泄露资源存在性。`userId` 可空仅兼容 `db push` 存量行，新写入必带；无主会话对
+> 所有用户不可见。
 
 列表项：
 
@@ -443,13 +451,13 @@ POST /api/chat/completions
 - 密钥安全：`apiKey` 目前**明文**存库（与 Prisma 默认一致），接口与日志都不会输出；
   后续可加 `ENCRYPTION_KEY` 做 AES 加密（见"非目标"）。
 - 代理部署：SSE 需要关掉缓冲（已返回 `X-Accel-Buffering: no`，nginx 侧也可 `proxy_buffering off`）。
-- 鉴权：`/api/chat/*` 需要登录（Nest 全局 `JwtAuthGuard` + httpOnly cookie）；浏览器侧 JSON 请求统一走 `src/utils/api.ts` 的 axios `request`（已默认 `withCredentials: true`），SSE 后续用 `fetch-event-source` 单独实现。
+- 鉴权：`/api/chat/*` 需要登录（Nest 全局 `JwtAuthGuard` + httpOnly cookie）；浏览器侧 JSON 请求统一走 `src/utils/api.ts` 的 axios `request`（已默认 `withCredentials: true`），SSE 在 `components/chat/stream.ts` 单独实现：`fetch` + `eventsource-parser/stream` 解析（POST + `credentials: 'include'`），**不做自动重连**（重连会重复计费/落库），失败由用户重试。
 
 ---
 
 ## 八、前端接入
 
-`EventSource` 只支持 GET，无法带 JSON body；SSE 需要支持 POST + 自定义请求头，当前项目尚未接入前端流式 UI，后续计划使用 `fetch-event-source`。下面保留原始 `fetch` 读取逻辑，作为协议与帧解析说明：
+前端对话页已实现（`/chat`）。`EventSource` 只支持 GET，无法带 JSON body，因此 SSE 用 `fetch` + `eventsource-parser` 实现；实现分层与关键约定如下。
 
 ```ts
 const response = await fetch(`${API_BASE_URL}/api/chat/completions`, {
@@ -493,7 +501,35 @@ for (;;) {
 注意：
 
 - 自定义响应头需要后端 CORS 的 `exposedHeaders`（已配置 `X-Conversation-Id`、`X-Message-Id`）。
-- 对话页建议做成 Client Component，边收 delta 边渲染；不要在渲染期间重建 reader。
+- 对话页做成 Client Component，边收 delta 边渲染；不要在渲染期间重建 reader。
+
+### 8.1 前端实现（apps/frontend）
+
+```
+src/app/chat/page.tsx                # 页面壳（Server Component + Suspense）
+src/components/chat/
+├─ index.tsx           # 布局：左会话栏常驻 + 右消息区；内容列宽度可拖拽并持久化（localStorage）
+├─ conversation-list.tsx   # 会话列表：按 今天/昨天/近 7 天/更早 分组、搜索过滤、重命名与删除弹窗
+├─ message-list.tsx        # 贴底跟随、回到底部、右缘消息历史预览条（悬浮预览/点击定位）
+├─ message-bubble.tsx      # 用户气泡 / assistant Markdown、错误与中断行（带「重试」）、悬浮复制（copied 反馈）
+├─ composer.tsx / model-select.tsx   # 输入区（自动增高、字数、停止、按会话持久化草稿）与模型 Popover（空态可弹）
+├─ markdown.tsx        # react-markdown + remark-gfm + remark-math/rehype-katex（数学公式）；代码块语言标签、复制、换行开关，Shiki 高亮按语言懒加载（JS 引擎免 WASM，github-light/dark 双主题）
+├─ highlighter.ts      # Shiki 懒加载单例：语法包动态 import、常见别名归一化、失败回退纯文本
+├─ api.ts              # 会话/历史/模型 JSON 封装（走 utils/api 的 request）
+├─ stream.ts           # SSE 传输层：fetch + EventSourceParserStream，不重连
+├─ use-chat.ts         # 状态机：乐观更新 / delta 60ms 节流 / URL ?c=<id> / 历史游标分页
+└─ types.ts
+```
+
+约定：
+
+- **失败分支**：响应头之前返回 HTTP 200 + JSON 信封（如 `30003` 无模型、`30001` 会话不存在），复用
+  `utils/api.ts` 的 `reportApiError`（`10002` 触发全局跳登录）；流已开始后的错误走
+  `backend_stream_error` 帧，保留已生成片段并标记 `error`，允许重试。
+- **乐观更新**：发送即插入 user + assistant 占位；`X-Message-Id` 回填真实 id；头之前失败时移除占位
+  （后端已删除占位消息）。
+- **Markdown**：`react-markdown` + `remark-gfm`，不解析裸 HTML（无 XSS 面）；delta 按 60ms 节流合并
+  后再渲染，避免逐帧全量重解析；代码块用等宽样式 + 复制按钮，语法高亮（Shiki）留作后续。
 
 ### 8.1 设置弹窗（模型配置管理）
 
@@ -537,7 +573,9 @@ apps/frontend/src/components/settings/
 4. 会话列表有 `messageCount` 与 `lastMessage`；历史接口按游标翻页且 `hasMore` 正确；删除会话后消息级联删除。
 5. 无可用模型 → `code=30003`；上游 401 → `30007`；上游返回非 SSE → `30011`；会话不存在 → `30001`（HTTP 均为 200）。
 6. 头像 → 设置 → 模型：能新增 / 编辑 / 删除 / 设为默认 / 启用停用；密钥只显示掩码，编辑留空不改密钥；刷新后配置仍在。
-7. `pnpm lint` / `pnpm typecheck` / `pnpm build` 全绿。
+7. 前端 `/chat`：逐字渲染 Markdown（代码块可复制）；停止按钮中断后刷新页面消息为 `aborted`；`?c=<id>` 刷新可续聊；无模型时引导打开设置。
+8. 会话按用户隔离：用户 B 的列表看不到用户 A 的会话，直接请求 A 的会话历史/删除/续聊均返回 `30001`。
+9. `pnpm lint` / `pnpm typecheck` / `pnpm build` 全绿。
 
 ---
 
@@ -545,9 +583,11 @@ apps/frontend/src/components/settings/
 
 本轮不做：
 
-- 前端对话 UI 与 SSE 客户端封装（`apps/frontend`）。
 - `tools` / function calling、多模态（图片、音频）。
 - token 级上下文裁剪、历史摘要压缩、向量记忆。
 - `apiKey` 加密（AES + `ENCRYPTION_KEY`）、限流（`@nestjs/throttler`）、配额与用量统计。
 - 「测试连接」按钮（保存前校验 baseUrl / apiKey 是否可用）、模型拖拽排序。
-- 会话归属用户：后续接入鉴权时，给 `Conversation` 加 `userId` 关联 `User`，并在查询处按用户过滤（需要一次 `db:push`）。
+- （已完成）失败轮「重试」（`DELETE /api/chat/conversations/:id/last-turn` + 前端撤回重发）、Shiki 代码高亮（按语言懒加载）、代码块换行开关、Composer 草稿按会话持久化、侧栏搜索过滤、数学公式（KaTeX）。
+
+> 已完成（原非目标）：前端对话 UI 与 SSE 客户端封装（§8.1）；会话归属用户（`Conversation.userId`，
+> service 层按 `@CurrentUser()` 过滤，越权统一 `30001`；存量无主会话对所有用户不可见）。

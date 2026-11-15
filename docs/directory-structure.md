@@ -91,7 +91,7 @@ apps/backend  → 独立（不依赖 packages/*）
 
 ### apps/frontend/src/app/components
 
-App Router 业务页面内使用的组件，例如 workflow、header、ThemeSwitch。
+App Router 业务页面内使用的组件，例如 workflow、header、ThemeSwitch、chat。
 
 要求：
 

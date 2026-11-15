@@ -45,15 +45,15 @@ export class ChatService {
    * 一轮对话的准备：解析/创建会话、解析模型、落 user 消息与 assistant 占位消息、
    * 从数据库重建上下文。任何失败都发生在写 SSE 响应头之前，可直接走全局异常过滤器。
    */
-  async prepareTurn(dto: ChatCompletionDto): Promise<PreparedTurn> {
+  async prepareTurn(userId: string, dto: ChatCompletionDto): Promise<PreparedTurn> {
     const content = dto.content.trim()
     if (!content) {
       throw new ApiException(ApiCode.CHAT_CONTENT_EMPTY, 'content 不能为空', HttpStatus.BAD_REQUEST)
     }
 
     const conversation = dto.conversationId
-      ? await this.requireConversation(dto.conversationId)
-      : await this.createConversation(content, dto.modelId)
+      ? await this.requireConversation(userId, dto.conversationId)
+      : await this.createConversation(userId, content, dto.modelId)
 
     const model = await this.models.resolve(dto.modelId, conversation.modelId)
     if (conversation.modelId !== model.id) {
@@ -199,9 +199,9 @@ export class ChatService {
     }
   }
 
-  private async requireConversation(id: string) {
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id },
+  private async requireConversation(userId: string, id: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id, userId },
       select: { id: true, modelId: true, systemPrompt: true },
     })
     if (!conversation) {
@@ -214,7 +214,7 @@ export class ChatService {
     return conversation
   }
 
-  private async createConversation(content: string, modelId?: string) {
+  private async createConversation(userId: string, content: string, modelId?: string) {
     let resolvedModelId: string | null = null
     if (modelId) {
       const model = await this.prisma.aiModel.findFirst({
@@ -233,6 +233,7 @@ export class ChatService {
 
     return this.prisma.conversation.create({
       data: {
+        userId,
         title: content.slice(0, TITLE_MAX_CHARS) || DEFAULT_TITLE,
         modelId: resolvedModelId,
       },

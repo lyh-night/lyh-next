@@ -9,7 +9,8 @@ import { toast } from 'sonner'
  *   业务失败也是 HTTP 200，失败原因看 code（业务码见 docs/err-handing.md）。
  * - 业务错误与网络错误在这里归一化为 ApiError，并默认弹一次 toast。
  * - 会话失效（code=10002）通过 onUnauthorized 通知 SessionProvider 跳转登录页。
- * - SSE / 流式接口不在本文件处理，后续用 fetch-event-source 单独实现。
+ * - SSE / 流式接口在 `components/chat/stream.ts` 单独实现，复用本文件的
+ *   `reportApiError` / `isApiEnvelope`，保证会话失效与错误提示行为一致。
  */
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -27,6 +28,8 @@ export const API_CODE = {
   OK: 0,
   /** 未登录 / 会话失效：前端统一回登录页 */
   UNAUTHORIZED: 10002,
+  /** 没有可用的 AI 模型：引导打开设置添加 */
+  CHAT_NO_MODEL: 30003,
 } as const
 
 export interface ApiEnvelope<T> {
@@ -117,7 +120,7 @@ function fallbackMessageForStatus(status: number): string {
   }
 }
 
-function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
+export function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
   if (!value || typeof value !== 'object') return false
 
   const { code, message } = value as { code?: unknown; message?: unknown }
@@ -125,11 +128,15 @@ function isApiEnvelope(value: unknown): value is ApiEnvelope<unknown> {
   return typeof code === 'number' && typeof message === 'string' && 'data' in value
 }
 
-function createApiError(input: {
+/**
+ * 归一化业务失败并触发对应副作用（会话失效跳登录 / 错误 toast），
+ * 返回可直接抛出的 ApiError。axios 通道与 SSE 通道共用，保证行为一致。
+ */
+export function reportApiError(input: {
   code: number
   message: string
   stack?: string[]
-  config?: RequestConfig
+  config?: Pick<RequestConfig, 'silent' | 'skipAuthRedirect'>
 }): ApiError {
   const { code, message, stack = [], config } = input
 
@@ -155,7 +162,7 @@ client.interceptors.response.use(
     const config = response.config as RequestConfig
 
     if (!isApiEnvelope(body)) {
-      throw createApiError({
+      throw reportApiError({
         code: -1,
         message: '响应格式异常，请稍后重试',
         config,
@@ -163,7 +170,7 @@ client.interceptors.response.use(
     }
 
     if (body.code !== API_CODE.OK) {
-      throw createApiError({
+      throw reportApiError({
         code: body.code,
         message: body.message || '请求失败，请稍后重试',
         stack: body.stack ?? [],
@@ -190,7 +197,7 @@ client.interceptors.response.use(
       const envelope = isApiEnvelope(body) ? body : undefined
 
       return Promise.reject(
-        createApiError({
+        reportApiError({
           // 代理/网关可能返回非信封，此时按 HTTP 状态兜底
           code: envelope?.code ?? response.status,
           message: envelope?.message || fallbackMessageForStatus(response.status),
@@ -203,7 +210,7 @@ client.interceptors.response.use(
     const timedOut = error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT'
 
     return Promise.reject(
-      createApiError({
+      reportApiError({
         code: -1,
         message: timedOut ? '请求超时，请稍后重试' : '网络连接失败，请检查网络后重试',
         config,

@@ -49,6 +49,7 @@ description: 统一响应信封、DTO 校验、HTTP 200 约定与 Swagger 标注
 - [ ] POST 路由是否加了 `@HttpCode(200)` + `@ApiOkResponse`
 - [ ] DTO 数字字段（query）是否加了 `@Type(() => Number)`
 - [ ] 是否复用了 `@Public()` / 全局守卫，而不是每个接口手工校验登录
+- [ ] 受保护资源（按 id 查 / 改 / 删）是否用 `@CurrentUser()` 把 `userId` 带进查询条件；越权与不存在统一返回"不存在"，不泄露存在性
 - [ ] 返回结构是否只包含 `data` 内容（信封由拦截器负责）
 - [ ] 失败是否抛 `ApiException` 并选用了正确的业务码区间（1xxxx 通用 / 2xxxx 认证 / 3xxxx 对话）
 - [ ] Swagger 描述是否还在引用旧字段 `status.code`

@@ -40,11 +40,13 @@ model AiModel {
   @@index([isActive, sortOrder])
 }
 
-/// 一个会话（多轮对话的容器）
+/// 一个会话（多轮对话的容器）；userId 为空表示 schema 隔离前创建的存量数据，对所有用户不可见
 model Conversation {
   id           String   @id @default(cuid())
   title        String   @default("新对话")
   systemPrompt String?
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   modelId      String?
   model        AiModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
@@ -52,6 +54,7 @@ model Conversation {
 
   messages ChatMessage[]
 
+  @@index([userId, updatedAt])
   @@index([updatedAt])
 }
 

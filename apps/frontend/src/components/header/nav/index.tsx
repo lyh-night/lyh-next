@@ -8,6 +8,7 @@ export default function Nav() {
   const pathname = usePathname()
   const nav_list = [
     { label: '首页', value: 'home' },
+    { label: '对话', value: 'chat' },
     { label: '工作流', value: 'workflow' },
   ]
 

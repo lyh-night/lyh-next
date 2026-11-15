@@ -37,11 +37,12 @@ function isRecordNotFound(error: unknown): boolean {
 export class ConversationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateConversationDto) {
+  async create(userId: string, dto: CreateConversationDto) {
     const model = dto.modelId ? await this.findActiveModel(dto.modelId) : null
 
     return this.prisma.conversation.create({
       data: {
+        userId,
         title: dto.title?.trim() || DEFAULT_TITLE,
         systemPrompt: dto.systemPrompt ?? null,
         modelId: model?.id ?? null,
@@ -57,13 +58,15 @@ export class ConversationsService {
     })
   }
 
-  async list(dto: ListConversationsDto) {
+  async list(userId: string, dto: ListConversationsDto) {
     const page = dto.page ?? 1
     const limit = dto.limit ?? 20
+    const where: Prisma.ConversationWhereInput = { userId }
 
     const [total, rows] = await Promise.all([
-      this.prisma.conversation.count(),
+      this.prisma.conversation.count({ where }),
       this.prisma.conversation.findMany({
+        where,
         orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * limit,
         take: limit,
@@ -103,9 +106,9 @@ export class ConversationsService {
     }
   }
 
-  async detail(id: string) {
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id },
+  async detail(userId: string, id: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id, userId },
       select: {
         id: true,
         title: true,
@@ -129,7 +132,9 @@ export class ConversationsService {
     return { ...rest, messageCount: _count.messages }
   }
 
-  async update(id: string, dto: UpdateConversationDto) {
+  async update(userId: string, id: string, dto: UpdateConversationDto) {
+    await this.requireOwned(userId, id)
+
     const data: {
       title?: string
       systemPrompt?: string | null
@@ -168,20 +173,64 @@ export class ConversationsService {
     }
   }
 
-  async remove(id: string) {
-    try {
-      await this.prisma.conversation.delete({ where: { id } })
-    } catch (error) {
-      if (isRecordNotFound(error)) {
-        throw new ApiException(
-          ApiCode.CHAT_CONVERSATION_NOT_FOUND,
-          '会话不存在',
-          HttpStatus.NOT_FOUND,
-        )
-      }
-      throw error
+  async remove(userId: string, id: string) {
+    const deleted = await this.prisma.conversation.deleteMany({ where: { id, userId } })
+    if (deleted.count === 0) {
+      throw new ApiException(
+        ApiCode.CHAT_CONVERSATION_NOT_FOUND,
+        '会话不存在',
+        HttpStatus.NOT_FOUND,
+      )
     }
 
+    return { success: true }
+  }
+
+  /**
+   * 撤回最后一轮未完成的回合（重试前调用）：
+   * - 末尾是 aborted / error assistant（error 含流中失败但已有部分内容的落库行）→ 连同其 user 一起删除；
+   * - 末尾是 user（流开始前失败时 assistant 占位已被后端删除）→ 只删该 user；
+   * - 末尾是已完成的回合 → 返回 success: false，不做任何删除。
+   */
+  async removeLastTurn(userId: string, id: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    })
+    if (!conversation) {
+      throw new ApiException(
+        ApiCode.CHAT_CONVERSATION_NOT_FOUND,
+        '会话不存在',
+        HttpStatus.NOT_FOUND,
+      )
+    }
+
+    const latest = await this.prisma.chatMessage.findMany({
+      where: { conversationId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 2,
+      select: { id: true, role: true, status: true },
+    })
+    if (latest.length === 0) return { success: true }
+
+    const [last, previous] = latest
+    const deleteIds: string[] = []
+
+    if (last.role === 'assistant') {
+      if (last.status !== 'aborted' && last.status !== 'error') return { success: false }
+      deleteIds.push(last.id)
+      if (previous?.role === 'user') deleteIds.push(previous.id)
+    } else if (last.role === 'user') {
+      deleteIds.push(last.id)
+    } else {
+      return { success: false }
+    }
+
+    await this.prisma.$transaction(
+      deleteIds.map((messageId) =>
+        this.prisma.chatMessage.deleteMany({ where: { id: messageId } }),
+      ),
+    )
     return { success: true }
   }
 
@@ -189,9 +238,9 @@ export class ConversationsService {
    * 历史消息：`messageId` 作为游标向前翻页（返回更旧的一页），
    * 输出按 createdAt 升序，前端可直接追加到列表尾部 / 前插到头部。
    */
-  async history(dto: ChatHistoryDto) {
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id: dto.conversationId },
+  async history(userId: string, dto: ChatHistoryDto) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: dto.conversationId, userId },
       select: { id: true },
     })
     if (!conversation) {
@@ -228,6 +277,21 @@ export class ConversationsService {
       conversationId: dto.conversationId,
       items: rows.slice(0, limit).reverse(),
       hasMore,
+    }
+  }
+
+  /** 校验会话属于当前用户；越权与不存在统一 30001，不泄露资源存在性 */
+  private async requireOwned(userId: string, id: string) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    })
+    if (!conversation) {
+      throw new ApiException(
+        ApiCode.CHAT_CONVERSATION_NOT_FOUND,
+        '会话不存在',
+        HttpStatus.NOT_FOUND,
+      )
     }
   }
 

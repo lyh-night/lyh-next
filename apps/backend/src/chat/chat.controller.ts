@@ -2,6 +2,7 @@ import { Body, Controller, Post, Res } from '@nestjs/common'
 import { ApiBody, ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger'
 import { once } from 'node:events'
 import type { Response } from 'express'
+import { CurrentUser } from '../auth/current-user.decorator.js'
 import { SkipResponseEnvelope } from '../common/decorators/skip-response-envelope.decorator.js'
 import { ChatService } from './chat.service.js'
 import { ChatCompletionDto } from './dto/chat-completion.dto.js'
@@ -23,7 +24,11 @@ export class ChatController {
   @ApiProduces('text/event-stream')
   @ApiBody({ type: ChatCompletionDto })
   @ApiOkResponse({ description: 'SSE 流；响应头含 X-Conversation-Id / X-Message-Id' })
-  async completions(@Body() dto: ChatCompletionDto, @Res() res: Response): Promise<void> {
+  async completions(
+    @CurrentUser('id') userId: string,
+    @Body() dto: ChatCompletionDto,
+    @Res() res: Response,
+  ): Promise<void> {
     const clientAbort = new AbortController()
     const onClose = () => clientAbort.abort()
 
@@ -55,7 +60,7 @@ export class ChatController {
     }
 
     try {
-      const turn = await this.chatService.prepareTurn(dto)
+      const turn = await this.chatService.prepareTurn(userId, dto)
       conversationId = turn.conversationId
       assistantMessageId = turn.assistantMessageId
 
