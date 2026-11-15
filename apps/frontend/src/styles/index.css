@@ -9,6 +9,35 @@
 @import './variable.css';
 @import './custom.css';
 
+/* 等宽字体栈：仅影响 font-mono 工具类（代码块、时间戳、token 计数），不涉及主题色变量 */
+@theme {
+  --font-mono: 'Geist Mono', 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+}
+
+@layer components {
+  /* 对话区顶部氛围光晕：全站唯一一处品牌色氛围，静态不动画 */
+  .chat-glow {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 16rem;
+    pointer-events: none;
+    background: radial-gradient(
+      60% 100% at 50% 0%,
+      color-mix(in oklab, var(--color-primary) 5%, transparent),
+      transparent 70%
+    );
+  }
+
+  .dark .chat-glow {
+    background: radial-gradient(
+      60% 100% at 50% 0%,
+      color-mix(in oklab, var(--color-primary) 8%, transparent),
+      transparent 70%
+    );
+  }
+}
+
 /*
  * 基础样式必须放在 @layer base 中：
  * 未分层（unlayered）的声明优先级高于 Tailwind 的 utilities 层，
@@ -51,5 +80,34 @@
 
   .dark .shiki-host pre span {
     color: var(--shiki-dark) !important;
+  }
+
+  /*
+   * 细滚动条（对齐 DSH）：thumb 用 2px 透明边框 + background-clip 内缩，
+   * 视觉宽度约 4px 且带圆角；hover 才加深。层内声明不影响工具类。
+   */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-foreground) 22%, transparent) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+    background-color: color-mix(in oklab, var(--color-foreground) 22%, transparent);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--color-foreground) 38%, transparent);
   }
 }

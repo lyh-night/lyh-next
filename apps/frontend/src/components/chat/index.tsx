@@ -22,6 +22,11 @@ export default function ChatWorkspace() {
   const [areaWidth, setAreaWidth] = useState(0)
   const mainRef = useRef<HTMLElement>(null)
   const openSettings = useCallback(() => setSettingsOpen(true), [])
+  /** 欢迎 hero 建议点击后预填给 Composer 的提示模板（nonce 驱动重复点击） */
+  const [composerSeed, setComposerSeed] = useState<{ text: string; nonce: number } | null>(null)
+  const handlePickSuggestion = useCallback((text: string) => {
+    setComposerSeed((prev) => ({ text, nonce: (prev?.nonce ?? 0) + 1 }))
+  }, [])
 
   useEffect(() => {
     const stored = Number(window.localStorage.getItem(COLUMN_WIDTH_STORAGE_KEY))
@@ -61,7 +66,7 @@ export default function ChatWorkspace() {
 
   return (
     <div className="flex min-h-0 flex-1">
-      <aside className="border-border flex w-60 shrink-0 flex-col border-r md:w-[272px]">
+      <aside className="border-border motion-safe:animate-in motion-safe:fade-in flex w-60 shrink-0 flex-col border-r motion-safe:duration-500 md:w-[272px]">
         <ConversationList
           conversations={chat.conversations}
           total={chat.conversationsTotal}
@@ -74,10 +79,12 @@ export default function ChatWorkspace() {
             await chat.renameConversation(id, title)
           }}
           onLoadMore={() => void chat.loadMoreConversations()}
+          onOpenSettings={openSettings}
         />
       </aside>
 
-      <main ref={mainRef} className="flex min-w-0 flex-1 flex-col">
+      <main ref={mainRef} className="relative flex min-w-0 flex-1 flex-col">
+        <div aria-hidden className="chat-glow" />
         <MessageList
           messages={chat.messages}
           loadingHistory={chat.loadingHistory}
@@ -88,6 +95,7 @@ export default function ChatWorkspace() {
           onLoadOlder={() => void chat.loadOlder()}
           onOpenSettings={openSettings}
           onRetry={() => void chat.retryLastTurn()}
+          onPickSuggestion={handlePickSuggestion}
         />
 
         <Composer
@@ -97,6 +105,7 @@ export default function ChatWorkspace() {
           streaming={chat.streaming}
           columnWidth={effectiveColumnWidth}
           draftKey={chat.activeId ?? 'new'}
+          seed={composerSeed}
           onSend={(content) => void chat.send(content)}
           onStop={chat.stop}
         />

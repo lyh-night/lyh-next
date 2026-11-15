@@ -38,6 +38,8 @@ interface ComposerProps {
   columnWidth: number
   /** 草稿归属键：会话 id 或 'new'，切换会话时恢复/保存各自的草稿 */
   draftKey: string
+  /** 欢迎 hero 建议点击后预填的提示模板（nonce 变化触发） */
+  seed?: { text: string; nonce: number } | null
   onSend: (content: string) => void
   onStop: () => void
 }
@@ -49,6 +51,7 @@ export function Composer({
   streaming,
   columnWidth,
   draftKey,
+  seed,
   onSend,
   onStop,
 }: ComposerProps) {
@@ -65,6 +68,13 @@ export function Composer({
     const timer = window.setTimeout(() => writeDraft(draftKey, value), 300)
     return () => window.clearTimeout(timer)
   }, [draftKey, value])
+
+  // 欢迎 hero 建议：预填提示模板并聚焦（nonce 变化才触发，同文本可重复点击）
+  useEffect(() => {
+    if (!seed) return
+    setValue(seed.text)
+    textareaRef.current?.focus()
+  }, [seed])
 
   // 内容变化后自适应高度（field-sizing 在部分浏览器不可用，JS 兜底）
   useEffect(() => {
@@ -99,7 +109,7 @@ export function Composer({
     <div className="bg-background border-border shrink-0 border-t px-4 py-3 md:px-6">
       <div className="mx-auto" style={{ maxWidth: columnWidth }}>
         {/* DSH 风格：一个圆角容器，内部无边框 textarea + 底部控制行 */}
-        <div className="border-border bg-background rounded-2xl border">
+        <div className="border-border bg-background focus-within:border-foreground/25 rounded-xl border shadow-sm transition-colors">
           <Textarea
             ref={textareaRef}
             value={value}
@@ -107,9 +117,9 @@ export function Composer({
             onKeyDown={handleKeyDown}
             placeholder="输入消息，Enter 发送，Shift + Enter 换行"
             rows={3}
-            className="placeholder:text-muted-foreground max-h-48 min-h-[88px] resize-none rounded-b-none border-0 bg-transparent px-3 pt-3 shadow-none focus-visible:border-transparent focus-visible:ring-0 md:text-sm"
+            className="placeholder:text-muted-foreground/80 max-h-48 min-h-[80px] resize-none rounded-b-none border-0 bg-transparent px-3 pt-3 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
           />
-          <div className="flex items-center justify-between px-2 pb-1.5">
+          <div className="flex items-center justify-between px-2.5 pb-2">
             <span
               className={`text-xs ${
                 overLimit ? 'text-destructive font-medium' : 'text-muted-foreground/70'

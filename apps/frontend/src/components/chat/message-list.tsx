@@ -48,6 +48,17 @@ function buildPreview(message: UiMessage, index: number): MessagePreview {
   }
 }
 
+/** 欢迎 hero 的场景建议：label 展示，template 预填输入框（点击后由用户补全再发送） */
+const SUGGESTIONS = [
+  { label: '把这段话翻译成英文', template: '帮我翻译成英文：' },
+  { label: '三句话总结一段内容', template: '用三句话总结：' },
+  {
+    label: '写一个校验手机号的正则',
+    template: '写一个校验中国大陆手机号的正则表达式，并解释各部分含义',
+  },
+  { label: '解释这段代码的作用', template: '解释这段代码：' },
+]
+
 interface MessageListProps {
   messages: UiMessage[]
   loadingHistory: boolean
@@ -61,6 +72,8 @@ interface MessageListProps {
   onOpenSettings: () => void
   /** 重试最后一轮未完成的回合（撤回后重发） */
   onRetry: () => void
+  /** 欢迎 hero 建议点击：预填提示模板到输入框 */
+  onPickSuggestion: (text: string) => void
 }
 
 export function MessageList({
@@ -73,6 +86,7 @@ export function MessageList({
   onLoadOlder,
   onOpenSettings,
   onRetry,
+  onPickSuggestion,
 }: MessageListProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -169,7 +183,7 @@ export function MessageList({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="h-full overflow-y-auto px-4 py-4 md:px-6"
+        className="motion-safe:animate-in motion-safe:fade-in h-full overflow-y-auto px-4 py-6 motion-safe:duration-500 md:px-6"
       >
         {hasMoreHistory && messages.length > 0 && (
           <div className="mb-4 flex justify-center">
@@ -177,7 +191,7 @@ export function MessageList({
               type="button"
               onClick={onLoadOlder}
               disabled={loadingHistory}
-              className="border-border text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors disabled:opacity-50"
+              className="border-border text-muted-foreground hover:bg-accent hover:text-foreground flex h-7 items-center gap-1.5 rounded-full border px-3 text-[11px] transition-colors disabled:opacity-50"
             >
               <ChevronUp className="h-3.5 w-3.5" />
               {loadingHistory ? '加载中…' : '加载更早消息'}
@@ -186,28 +200,42 @@ export function MessageList({
         )}
 
         {messages.length === 0 && !loadingHistory ? (
-          <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-3">
-            <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
-              <MessageSquareText className="h-5 w-5" />
-            </div>
+          <div className="flex h-full flex-col items-center justify-center">
             {noModels ? (
-              <>
+              <div className="text-muted-foreground flex flex-col items-center gap-2">
+                <MessageSquareText className="text-muted-foreground/50 h-7 w-7" />
                 <p className="text-foreground text-sm font-medium">尚未配置可用的 AI 模型</p>
                 <p className="text-xs">先在设置里添加一个 OpenAI 兼容模型，再开始对话</p>
                 <Button type="button" variant="outline" size="sm" onClick={onOpenSettings}>
                   <Settings2 className="mr-1 h-3.5 w-3.5" />
                   打开设置
                 </Button>
-              </>
+              </div>
             ) : (
-              <>
-                <p className="text-foreground text-sm font-medium">开启你的第一段对话</p>
-                <p className="text-xs">输入内容后按 Enter 发送，Shift + Enter 换行</p>
-              </>
+              <div className="flex flex-col items-center pb-16">
+                <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+                  有什么可以帮你？
+                </h1>
+                <p className="text-muted-foreground mt-2 text-[13px]">
+                  从下面的场景开始，或直接在下方输入你的问题
+                </p>
+                <div className="mt-7 grid w-full max-w-md grid-cols-2 gap-2">
+                  {SUGGESTIONS.map((suggestion) => (
+                    <button
+                      key={suggestion.label}
+                      type="button"
+                      onClick={() => onPickSuggestion(suggestion.template)}
+                      className="border-border hover:bg-accent hover:text-foreground bg-background text-muted-foreground flex h-9 items-center justify-center rounded-lg border px-3 text-[13px] transition-colors"
+                    >
+                      {suggestion.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         ) : (
-          <div className="mx-auto flex flex-col gap-5" style={{ maxWidth: columnWidth }}>
+          <div className="mx-auto flex flex-col gap-6" style={{ maxWidth: columnWidth }}>
             {messages.map((message, index) => {
               const isLast = index === messages.length - 1
 

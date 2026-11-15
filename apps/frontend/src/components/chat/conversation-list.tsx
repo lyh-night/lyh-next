@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react'
 import {
   Button,
   Dialog,
@@ -70,6 +70,8 @@ interface ConversationListProps {
   onDelete: (id: string) => void
   onRename: (id: string, title: string) => Promise<void>
   onLoadMore: () => void
+  /** 打开设置弹窗（侧栏 footer 入口） */
+  onOpenSettings: () => void
 }
 
 export function ConversationList({
@@ -82,6 +84,7 @@ export function ConversationList({
   onDelete,
   onRename,
   onLoadMore,
+  onOpenSettings,
 }: ConversationListProps) {
   /** 待删除的会话，非空时展示确认弹窗 */
   const [deleteTarget, setDeleteTarget] = useState<ConversationSummary | null>(null)
@@ -122,13 +125,13 @@ export function ConversationList({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="px-3 py-3">
+      <div className="px-3 pb-2 pt-3">
         <button
           type="button"
           onClick={onNew}
-          className="border-border hover:bg-accent hover:text-foreground flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
+          className="border-border hover:bg-accent hover:text-foreground flex h-8 w-full items-center gap-1.5 rounded-md border px-2.5 text-[13px] transition-colors"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
           新建对话
         </button>
         <div className="relative mt-2">
@@ -160,7 +163,7 @@ export function ConversationList({
         ) : (
           groups.map((group) => (
             <div key={group.label}>
-              <div className="text-muted-foreground px-2 pb-1 pt-3 text-xs font-medium">
+              <div className="text-muted-foreground/70 px-2 pb-1 pt-3 text-[11px] font-medium tracking-wide">
                 {group.label}
               </div>
               <div className="space-y-0.5">
@@ -171,7 +174,7 @@ export function ConversationList({
                     <div
                       key={conversation.id}
                       className={cn(
-                        'group relative rounded-md px-3 py-2 transition-colors',
+                        'group relative rounded-md px-2.5 py-1.5 transition-colors',
                         active ? 'bg-accent' : 'hover:bg-accent/50',
                       )}
                     >
@@ -180,19 +183,19 @@ export function ConversationList({
                         onClick={() => onSelect(conversation.id)}
                         className="block w-full pr-12 text-left"
                       >
-                        <span className="block truncate text-sm">
+                        <span className="block truncate text-[13px] leading-5">
                           {conversation.title || '新对话'}
                         </span>
-                        <span className="text-muted-foreground mt-0.5 block truncate text-xs">
+                        <span className="text-muted-foreground mt-0.5 block truncate text-[11px] leading-4">
                           {formatRelativeTime(conversation.updatedAt)}
                           {conversation.messageCount > 0 && ` · ${conversation.messageCount} 条`}
                         </span>
                       </button>
-                      <div className="absolute right-1.5 top-2 hidden items-center gap-0.5 group-hover:flex">
+                      <div className="absolute right-1 top-1 hidden items-center gap-0.5 group-hover:flex">
                         <button
                           type="button"
                           onClick={() => openRename(conversation)}
-                          className="text-muted-foreground hover:bg-background hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md transition-colors"
+                          className="text-muted-foreground hover:text-foreground bg-background/90 hover:bg-background flex h-6 w-6 items-center justify-center rounded-md shadow-sm transition-colors"
                           aria-label="重命名会话"
                           title="重命名"
                         >
@@ -201,7 +204,7 @@ export function ConversationList({
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(conversation)}
-                          className="text-muted-foreground hover:bg-background hover:text-destructive flex h-6 w-6 items-center justify-center rounded-md transition-colors"
+                          className="text-muted-foreground hover:text-destructive bg-background/90 hover:bg-background flex h-6 w-6 items-center justify-center rounded-md shadow-sm transition-colors"
                           aria-label="删除会话"
                           title="删除会话"
                         >
@@ -227,6 +230,18 @@ export function ConversationList({
             </button>
           </div>
         )}
+      </div>
+
+      {/* 侧栏 footer：设置入口 */}
+      <div className="border-border border-t p-2">
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-8 w-full items-center gap-2 rounded-md px-2.5 text-[13px] transition-colors"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+          设置
+        </button>
       </div>
 
       {/* 重命名弹窗 */}

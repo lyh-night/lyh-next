@@ -25,7 +25,7 @@ function MessageMeta({ message }: { message: UiMessage }) {
   const meta = [message.modelName, tokens].filter(Boolean).join(' · ')
   if (!meta) return null
 
-  return <div className="text-muted-foreground mt-1 text-xs">{meta}</div>
+  return <div className="text-muted-foreground/80 mt-1.5 text-[11px]">{meta}</div>
 }
 
 interface MessageBubbleProps {
@@ -48,11 +48,11 @@ function MessageBubbleBase({ message, onOpenSettings, onRetry }: MessageBubblePr
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="bg-muted max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2.5">
-          <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+        <div className="bg-muted max-w-[80%] rounded-2xl rounded-br-md px-3.5 py-2">
+          <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed md:text-sm">
             {message.content}
           </div>
-          <div className="text-muted-foreground mt-1 text-right text-xs">
+          <div className="text-muted-foreground/80 mt-0.5 text-right text-[11px]">
             {formatTime(message.createdAt)}
           </div>
         </div>
@@ -65,18 +65,18 @@ function MessageBubbleBase({ message, onOpenSettings, onRetry }: MessageBubblePr
       {message.content ? (
         <Markdown content={message.content} />
       ) : message.status === 'streaming' || message.status === 'error' ? null : (
-        <span className="text-muted-foreground text-sm">（无内容）</span>
+        <span className="text-muted-foreground/70 text-[11px]">（无内容）</span>
       )}
 
       {message.status === 'streaming' && (
-        <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+        <div className="text-muted-foreground/80 mt-1 flex items-center gap-2 text-[11px]">
           <span className="bg-foreground inline-block h-3 w-[2px] animate-pulse" />
           正在输入…
         </div>
       )}
 
       {message.status === 'error' && (
-        <div className="bg-destructive/10 text-destructive mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md px-2.5 py-1.5 text-xs">
+        <div className="bg-destructive/10 text-destructive mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md px-2.5 py-1.5 text-[11px]">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           <span>{message.errorMessage ?? '生成失败'}</span>
           {message.errorCode === API_CODE.CHAT_NO_MODEL && onOpenSettings && (
@@ -106,7 +106,7 @@ function MessageBubbleBase({ message, onOpenSettings, onRetry }: MessageBubblePr
       )}
 
       {message.status === 'aborted' && (
-        <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+        <div className="text-muted-foreground/80 mt-1 flex items-center gap-2 text-[11px]">
           <span className="flex items-center gap-1">
             <Ban className="h-3.5 w-3.5" />
             已停止生成
@@ -132,7 +132,7 @@ function MessageBubbleBase({ message, onOpenSettings, onRetry }: MessageBubblePr
           <button
             type="button"
             onClick={() => void handleCopy()}
-            className="hover:bg-accent hover:text-foreground flex h-6 items-center gap-1 rounded-md px-1.5 text-xs transition-colors"
+            className="hover:bg-accent hover:text-foreground flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] transition-colors"
             aria-label="复制消息内容"
           >
             {copied ? (

@@ -523,6 +523,16 @@ src/components/chat/
 
 约定：
 
+- **视觉规范**（AI-Native 精修，参考 `.agent/skills/frontend-design`）：次级文字 11–13px 三级弱化、
+  控件高 28/32px、圆角 md/lg 为主、发丝级边框 + focus-within 才加深、细滚动条（`@layer base` 全局
+  webkit + `scrollbar-width: thin`）、强调色只用 `primary`。会话栏 footer 提供「设置」入口。
+  - 用户消息气泡为身份编码：`bg-primary/10`（暗色 `/15`）+ 不对称圆角 `rounded-[18px] rounded-br-[6px]`。
+  - 空状态为欢迎 hero：大标题「有什么可以帮你？」+ 4 个场景建议 chips（`onPickSuggestion` 经
+    `composerSeed` 预填输入框，不直接发送）。
+  - `chat-glow`（`@layer components`）：对话区顶部唯一一处品牌色氛围光晕，静态。
+  - `--font-mono` 走 Geist Mono → JetBrains Mono → SF Mono → Menlo 栈（`@theme`，仅影响 font-mono 类）。
+  - 入场动效仅一处编排：侧栏与消息区 `motion-safe:animate-in fade-in`，遵守 prefers-reduced-motion。
+
 - **失败分支**：响应头之前返回 HTTP 200 + JSON 信封（如 `30003` 无模型、`30001` 会话不存在），复用
   `utils/api.ts` 的 `reportApiError`（`10002` 触发全局跳登录）；流已开始后的错误走
   `backend_stream_error` 帧，保留已生成片段并标记 `error`，允许重试。

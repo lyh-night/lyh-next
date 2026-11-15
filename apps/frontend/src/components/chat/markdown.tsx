@@ -44,15 +44,15 @@ function CodeBlock({
   }
 
   return (
-    <div className="border-border bg-muted/60 my-3 overflow-hidden rounded-md border">
-      <div className="border-border flex h-8 items-center justify-between border-b px-3">
-        <span className="text-muted-foreground font-mono text-xs">{language ?? '代码'}</span>
+    <div className="border-border bg-muted/60 my-3 overflow-hidden rounded-lg border">
+      <div className="border-border flex h-7 items-center justify-between border-b px-3">
+        <span className="text-muted-foreground font-mono text-[11px]">{language ?? '代码'}</span>
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setWrapped((prev) => !prev)}
             className={cn(
-              'flex items-center gap-1 text-xs transition-colors',
+              'flex items-center gap-1 text-[11px] transition-colors',
               wrapped ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
             aria-pressed={wrapped}
@@ -64,7 +64,7 @@ function CodeBlock({
           <button
             type="button"
             onClick={() => void copy()}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[11px] transition-colors"
           >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? '已复制' : '复制'}
@@ -74,7 +74,7 @@ function CodeBlock({
       {html ? (
         <div
           className={cn(
-            'shiki-host p-3 font-mono text-xs leading-relaxed',
+            'shiki-host px-3 py-2.5 font-mono text-xs leading-[1.7]',
             wrapped && '[&_pre]:overflow-x-hidden! [&_pre]:whitespace-pre-wrap',
           )}
           dangerouslySetInnerHTML={{ __html: html }}
@@ -116,10 +116,10 @@ function extractText(node: ReactNode): string {
 }
 
 const components: Components = {
-  h1: ({ children }) => <h1 className="mb-1.5 mt-3 text-lg font-semibold">{children}</h1>,
-  h2: ({ children }) => <h2 className="mb-1.5 mt-3 text-base font-semibold">{children}</h2>,
-  h3: ({ children }) => <h3 className="mb-1 mt-2.5 text-sm font-semibold">{children}</h3>,
-  h4: ({ children }) => <h4 className="mb-1 mt-2.5 text-sm font-semibold">{children}</h4>,
+  h1: ({ children }) => <h1 className="mb-2 mt-5 text-lg font-semibold">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-2 mt-5 text-base font-semibold">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-1.5 mt-4 text-sm font-semibold">{children}</h3>,
+  h4: ({ children }) => <h4 className="mb-1.5 mt-4 text-sm font-semibold">{children}</h4>,
   p: ({ children }) => <p className="my-1.5 whitespace-pre-wrap leading-relaxed">{children}</p>,
   ul: ({ children }) => <ul className="my-1.5 list-disc space-y-1 pl-5">{children}</ul>,
   ol: ({ children }) => <ol className="my-1.5 list-decimal space-y-1 pl-5">{children}</ol>,
@@ -140,7 +140,7 @@ const components: Components = {
       {children}
     </blockquote>
   ),
-  hr: () => <hr className="border-border my-3" />,
+  hr: () => <hr className="border-border my-4" />,
   table: ({ children }) => (
     <div className="border-border my-3 overflow-x-auto rounded-md border">
       <table className="w-full border-collapse text-sm">{children}</table>
