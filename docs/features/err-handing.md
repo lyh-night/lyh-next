@@ -248,10 +248,10 @@ providers: [
 
 ### 3.3 现有文档里的错误码
 
-- `docs/auth.md` §4.6：401 / 409 / 400 的表格，全部写作 `status.code`。
-- `docs/chat.md` §4.5：400 / 404 / 429 / 502 / 503 的表格，全部写作 `status.code`。
-- `docs/coding-conventions.md` §四：`成功判断看 status.code === 0`。
-- `docs/monorepo.md` §19.3：响应结构写作 `{ status: { code, message }, data, stack }`。
+- `docs/features/auth.md` §4.6：401 / 409 / 400 的表格，全部写作 `status.code`。
+- `docs/features/chat.md` §4.5：400 / 404 / 429 / 502 / 503 的表格，全部写作 `status.code`。
+- `docs/agents/coding-conventions.md` §四：`成功判断看 status.code === 0`。
+- `docs/agents/monorepo.md` §19.3：响应结构写作 `{ status: { code, message }, data, stack }`。
 - `.agent/skills/nestjs-api-contract/SKILL.md` 与 `nestjs-error-handling/SKILL.md`：同样以 `status` 信封为准。
 
 这些是**当前状态**的准确描述；实施 §九 的 P1 后需要同步修改（见 §十二）。
@@ -741,10 +741,10 @@ P2（业务码）阶段：
 文档 / skill：
 
 - `AGENTS.md` 第 69 行的事实描述、第 71 行的 `status.code=401`。
-- `docs/auth.md` §4、§4.6、§7、§十 验收标准。
-- `docs/chat.md` §4、§4.5、§六 的错误码说明。
-- `docs/coding-conventions.md` §四。
-- `docs/monorepo.md` §19.3。
+- `docs/features/auth.md` §4、§4.6、§7、§十 验收标准。
+- `docs/features/chat.md` §4、§4.5、§六 的错误码说明。
+- `docs/agents/coding-conventions.md` §四。
+- `docs/agents/monorepo.md` §19.3。
 - `.agent/skills/nestjs-api-contract/SKILL.md`、`nestjs-error-handling/SKILL.md`。
 
 验收：
@@ -914,11 +914,11 @@ pnpm build
 | 文档 / 文件                                    | 需要更新的内容                                                  | 时机  |
 | ---------------------------------------------- | --------------------------------------------------------------- | ----- |
 | `AGENTS.md` §四                                | 第 69 行响应结构、第 71 行 `status.code=401`                    | P1/P2 |
-| `docs/auth.md`                                 | §4 响应示例、§4.6 错误码表、§7 前端解析、验收表                 | P1/P2 |
-| `docs/chat.md`                                 | §4 响应结构、§4.5 错误码表、§六 上游错误说明                    | P1/P2 |
-| `docs/coding-conventions.md`                   | §四「成功判断看 status.code」                                   | P1    |
-| `docs/monorepo.md` §19.3                       | 响应结构与全局注册说明                                          | P1    |
-| `docs/directory-structure.md`                  | 第 162 行「错误统一走 `HttpExceptionFilter`」保持不变，无需改动 | —     |
+| `docs/features/auth.md`                        | §4 响应示例、§4.6 错误码表、§7 前端解析、验收表                 | P1/P2 |
+| `docs/features/chat.md`                        | §4 响应结构、§4.5 错误码表、§六 上游错误说明                    | P1/P2 |
+| `docs/agents/coding-conventions.md`            | §四「成功判断看 status.code」                                   | P1    |
+| `docs/agents/monorepo.md` §19.3                | 响应结构与全局注册说明                                          | P1    |
+| `docs/agents/directory-structure.md`           | 第 162 行「错误统一走 `HttpExceptionFilter`」保持不变，无需改动 | —     |
 | `.agent/skills/nestjs-api-contract/SKILL.md`   | 统一响应信封、HTTP 200、错误码示例                              | P1/P2 |
 | `.agent/skills/nestjs-error-handling/SKILL.md` | 过滤器输出、stack 策略、日志格式                                | P1/P2 |
 | `apps/frontend/src/utils/api.ts` 注释          | `{ status, data, stack }` → 扁平结构                            | P1    |

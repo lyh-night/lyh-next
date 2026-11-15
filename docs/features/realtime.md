@@ -276,7 +276,7 @@ export function wsUrl(path = '/api/ws') {
   - 反向代理需支持 WebSocket Upgrade：`proxy_http_version 1.1`、`Upgrade`/`Connection` 头、足够的 `proxy_read_timeout`；仓库当前没有 Nginx 配置，只在文档中说明。
 - 当前 `docker-compose.yml` 是单后端实例，内存 registry 足够；多实例时踢人请求只通知本实例上的连接（token 吊销仍全局生效），后续需 Redis pub/sub 或 Postgres LISTEN/NOTIFY。
 - 文档：
-  - 本文档（`docs/realtime.md`）：架构图、事件协议、关闭码、踢人接口、代理/同站约束、单实例限制、验证步骤；实施时按需补充实现细节。
+  - 本文档（`docs/features/realtime.md`）：架构图、事件协议、关闭码、踢人接口、代理/同站约束、单实例限制、验证步骤；实施时按需补充实现细节。
   - 更新 [auth.md](./auth.md)：`ver` claim、会话吊销、`/api/admin/users/:id/kick`、401 文案；把“会话吊销”从后续项移到已实现。
   - 更新 [AGENTS.md](../AGENTS.md)：文档索引与“当前项目事实”增加 WebSocket/踢下线。
   - 更新 [directory-structure.md](./directory-structure.md)：`apps/backend/src/realtime`、`apps/frontend/src/services`、`provider/session-events.tsx`。

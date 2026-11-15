@@ -38,7 +38,7 @@
 - 不包化 `src/server`、`src/provider`、`src/generated/prisma`、`src/middleware.ts`、`src/utils/clipboard.ts`。
 - 不引入测试框架、CI、Changesets、共享 ESLint/TS 配置包、`pnpm catalog`。
 - 不发布到 npm：三个包全部 `"private": true`。
-- 不更新 `README.md` / `AGENTS.md` / `docs/commands.md`（列为阶段 5 的收尾项，见 §14）。
+- 不更新 `README.md` / `AGENTS.md` / `docs/agents/commands.md`（列为阶段 5 的收尾项，见 §14）。
 
 ---
 
@@ -777,7 +777,7 @@ CMD ["node", "apps/frontend/server.js"]
 - `.husky/pre-commit`（`npx lint-staged`）、`.husky/commit-msg`（`npx --no-install commitlint --edit`）保留在根，git 根未变，路径无需改。
 - `lint-staged` 配置放根 `package.json`（见 §8.2），钩子对 `apps/**` 与 `packages/**` 同样生效。
 - `commitlint.config.js` 保留在根，type 枚举不变。
-- 新增编码约定（写入本文件，后续可同步到 `docs/coding-conventions.md`）：
+- 新增编码约定（写入本文件，后续可同步到 `docs/agents/coding-conventions.md`）：
   1. 包内**禁止**引用应用别名 `@/*`，包内跨文件用相对路径，跨包用包名。
   2. 应用引用公共组件一律用 `@lyh-next/components/<subpath>`，不写深层相对路径（`../../packages/...`）。
   3. 新增可复用组件默认落在 `packages/components/src`；只在单一页面使用的组件留在 `apps/frontend/src/app/components`。
@@ -841,7 +841,7 @@ CMD ["node", "apps/frontend/server.js"]
 ### 阶段 5：部署与文档收尾
 
 - Dockerfile / `.dockerignore` / 根脚本 `db:*` 验证；`docker compose up -d --build`。
-- 同步文档：`README.md`（目录结构、Node 版本、命令）、`AGENTS.md`（文档索引 + 「typecheck 已定义」）、`docs/directory-structure.md`、`docs/commands.md`、`docs/tech-stack.md`（新增 pnpm workspace / Turborepo / tsdown）。
+- 同步文档：`README.md`（目录结构、Node 版本、命令）、`AGENTS.md`（文档索引 + 「typecheck 已定义」）、`docs/agents/directory-structure.md`、`docs/agents/commands.md`、`docs/agents/tech-stack.md`（新增 pnpm workspace / Turborepo / tsdown）。
 - 清理根残留：`node_modules`、`.next`、`tsconfig.tsbuildinfo`，重新 `pnpm install`。
 
 ---
@@ -887,7 +887,7 @@ CMD ["node", "apps/frontend/server.js"]
 3. 为 `@lyh-next/utils` 引入测试（vitest），并在 turbo 中加 `test` 任务。
 4. Changesets（若 utils/components 需要对外发布）。
 5. CI：GitHub Actions + turbo remote cache（`TURBO_TOKEN` / `TURBO_TEAM`）。
-6. 文档索引更新：`AGENTS.md` 挂载本文、`docs/commands.md` 重写为根命令表、`docs/directory-structure.md` 换成 monorepo 结构。
+6. 文档索引更新：`AGENTS.md` 挂载本文、`docs/agents/commands.md` 重写为根命令表、`docs/agents/directory-structure.md` 换成 monorepo 结构。
 7. 视 `src/app/components/workflow` 的复用诉求，评估是否再抽 `@lyh-next/workflow-editor`（优先级低，耦合 Zustand + xyflow）。
 
 ---
@@ -977,19 +977,19 @@ CMD ["node", "apps/frontend/server.js"]
 
 ### 19.3 运行时基础设施
 
-| 能力     | 实现                                                                                                                                                                              | 位置                                                        |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| 配置     | `@nestjs/config`，`isGlobal`、`cache`，env 优先级 `.env.local` → `.env`；`validateEnv` 启动期校验（缺必填变量直接失败，默认值集中在 `env.validation.ts`）                         | `app.module.ts`、`common/config/`                           |
-| 全局前缀 | `app.setGlobalPrefix('api')`                                                                                                                                                      | `main.ts`                                                   |
-| 参数校验 | 全局 `ValidationPipe`（`whitelist` + `transform` + `forbidNonWhitelisted`），query 数字字段用 DTO `@Type` 显式转换                                                                | `main.ts`、`*/dto/`                                         |
-| CORS     | `CORS_ORIGINS` 逗号分隔，默认 `http://localhost:3000`（校验层默认值），`credentials: true`                                                                                        | `main.ts`                                                   |
-| 响应结构 | 全局 `TransformInterceptor` + `HttpExceptionFilter`：扁平信封 `{ code, message, data, stack? }`；JSON 接口 HTTP 统一 200，`code=0` 成功、失败为业务码（见 `docs/err-handing.md`） | `common/interceptors/`、`common/filters/`、`common/errors/` |
-| 全局注册 | filter / interceptor 经 `CommonModule` 以 `APP_FILTER` / `APP_INTERCEPTOR` 注入（DI 顺序即执行顺序），守卫经 AuthModule `APP_GUARD`                                               | `common/common.module.ts`                                   |
-| 访问日志 | 全局 `LoggingInterceptor`：`METHOD path http=200 code=... 耗时ms`（业务码必须进日志）                                                                                             | `common/interceptors/`                                      |
-| 健康检查 | `GET /api/health` → `data` 为 `{ status, uptime, timestamp, version }`                                                                                                            | `health/`                                                   |
-| 服务信息 | `GET /api` → `data` 为 `{ name, version, environment }`                                                                                                                           | `app.controller.ts`                                         |
-| API 文档 | `@nestjs/swagger`，`GET /api/docs`，`addBearerAuth()` 预置                                                                                                                        | `main.ts`                                                   |
-| 优雅关闭 | `app.enableShutdownHooks()`，响应 `SIGTERM`                                                                                                                                       | `main.ts`                                                   |
+| 能力     | 实现                                                                                                                                                                                       | 位置                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| 配置     | `@nestjs/config`，`isGlobal`、`cache`，env 优先级 `.env.local` → `.env`；`validateEnv` 启动期校验（缺必填变量直接失败，默认值集中在 `env.validation.ts`）                                  | `app.module.ts`、`common/config/`                           |
+| 全局前缀 | `app.setGlobalPrefix('api')`                                                                                                                                                               | `main.ts`                                                   |
+| 参数校验 | 全局 `ValidationPipe`（`whitelist` + `transform` + `forbidNonWhitelisted`），query 数字字段用 DTO `@Type` 显式转换                                                                         | `main.ts`、`*/dto/`                                         |
+| CORS     | `CORS_ORIGINS` 逗号分隔，默认 `http://localhost:3000`（校验层默认值），`credentials: true`                                                                                                 | `main.ts`                                                   |
+| 响应结构 | 全局 `TransformInterceptor` + `HttpExceptionFilter`：扁平信封 `{ code, message, data, stack? }`；JSON 接口 HTTP 统一 200，`code=0` 成功、失败为业务码（见 `docs/features/err-handing.md`） | `common/interceptors/`、`common/filters/`、`common/errors/` |
+| 全局注册 | filter / interceptor 经 `CommonModule` 以 `APP_FILTER` / `APP_INTERCEPTOR` 注入（DI 顺序即执行顺序），守卫经 AuthModule `APP_GUARD`                                                        | `common/common.module.ts`                                   |
+| 访问日志 | 全局 `LoggingInterceptor`：`METHOD path http=200 code=... 耗时ms`（业务码必须进日志）                                                                                                      | `common/interceptors/`                                      |
+| 健康检查 | `GET /api/health` → `data` 为 `{ status, uptime, timestamp, version }`                                                                                                                     | `health/`                                                   |
+| 服务信息 | `GET /api` → `data` 为 `{ name, version, environment }`                                                                                                                                    | `app.controller.ts`                                         |
+| API 文档 | `@nestjs/swagger`，`GET /api/docs`，`addBearerAuth()` 预置                                                                                                                                 | `main.ts`                                                   |
+| 优雅关闭 | `app.enableShutdownHooks()`，响应 `SIGTERM`                                                                                                                                                | `main.ts`                                                   |
 
 ### 19.4 端口与路由约定
 
@@ -1106,7 +1106,7 @@ CORS_ORIGINS=http://localhost:3000
 
 ## 二十一、认证改为 Nest 托管（移除 NextAuth）
 
-> 详细需求、接口契约、会话规格与验收记录见 **[docs/auth.md](auth.md)**，本节只记录取舍。
+> 详细需求、接口契约、会话规格与验收记录见 **[docs/features/auth.md](auth.md)**，本节只记录取舍。
 
 ### 21.1 结论
 
