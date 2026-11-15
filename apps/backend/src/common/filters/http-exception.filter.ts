@@ -1,8 +1,10 @@
-import { ArgumentsHost, Catch, HttpStatus, Logger, type ExceptionFilter } from '@nestjs/common'
+import { ArgumentsHost, Catch, HttpStatus, type ExceptionFilter } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import type { Request, Response } from 'express'
 import { ApiCode } from '../errors/api-code.js'
 import { resolveApiCode, resolveApiMessage, shouldIncludeStack } from '../errors/api-error.js'
+import { PinoLoggerService } from '../logging/pino-logger.service.js'
+import { getRequestId } from '../request-context/request-context.js'
 import type { ApiFailure } from '../types/api-response.js'
 
 /**
@@ -16,10 +18,12 @@ import type { ApiFailure } from '../types/api-response.js'
  */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(HttpExceptionFilter.name)
   private readonly isProduction: boolean
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly logger: PinoLoggerService,
+  ) {
     this.isProduction = config.getOrThrow<string>('NODE_ENV') === 'production'
   }
 
@@ -35,15 +39,29 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // 未预期异常：完整堆栈只进服务端日志，不返回给客户端（除非非生产环境由 stack 字段带回）
     if (code === ApiCode.INTERNAL_ERROR) {
       this.logger.error(
-        `${request.method} ${request.originalUrl} code=${code} 未预期异常`,
+        {
+          method: request.method,
+          path: request.originalUrl,
+          code,
+          requestId: getRequestId() ?? '-',
+          reason: '未预期异常',
+        },
         exception instanceof Error ? exception.stack : String(exception),
+        'HTTP',
       )
     }
 
     // SSE 已写头，或响应已结束/连接已销毁：无法再写 JSON
     if (response.headersSent || response.writableEnded || response.destroyed) {
-      this.logger.error(
-        `${request.method} ${request.originalUrl} code=${code} 响应已开始或已结束，无法写入错误体`,
+      this.logger.warn(
+        {
+          method: request.method,
+          path: request.originalUrl,
+          code,
+          requestId: getRequestId() ?? '-',
+          reason: '响应已开始或已结束，无法写入错误体',
+        },
+        'HTTP',
       )
       return
     }

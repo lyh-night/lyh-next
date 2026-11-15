@@ -1,4 +1,5 @@
 import { Body, Controller, Post, Res } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import { ApiBody, ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger'
 import { once } from 'node:events'
 import type { Response } from 'express'
@@ -14,6 +15,8 @@ import { createUpstreamParser, type ParsedUsage } from './upstream-parser.js'
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  // 对话接口直接烧上游 token 费用：20 次/分钟（全局默认 300 次/分钟）
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('completions')
   @SkipResponseEnvelope()
   @ApiOperation({

@@ -11,6 +11,14 @@
 - TypeScript
 - pnpm
 
+## 后端（NestJS 12 + Express，ESM）
+
+- Prisma 7 + PostgreSQL（驱动适配器 `@prisma/adapter-pg`）
+- pino（结构化日志，开发环境 pino-pretty）
+- helmet（安全响应头）
+- @nestjs/throttler（接口限流；多实例配 `REDIS_URL` 时经 throttler-storage-redis + ioredis 共享计数）
+- jose（JWT）、bcryptjs、class-validator / class-transformer
+
 ---
 
 ## 工程化（monorepo）

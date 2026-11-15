@@ -4,10 +4,15 @@ import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import cookieParser from 'cookie-parser'
+import helmet from 'helmet'
 import { AppModule } from './app.module.js'
+import { PinoLoggerService } from './common/logging/pino-logger.service.js'
+import { requestContextMiddleware } from './common/request-context/request-context.js'
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  // bufferLogs：启动初期的 Nest 内部日志先缓存，切换 pino 后统一输出
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true })
+  app.useLogger(app.get(PinoLoggerService))
   const config = app.get(ConfigService)
   const logger = new Logger('Bootstrap')
 
@@ -16,8 +21,14 @@ async function bootstrap() {
   // 统一 API 前缀：业务路由、健康检查与文档都挂在 /api 下
   app.setGlobalPrefix('api')
 
+  // 安全响应头：CSP 关闭（/api/docs 的 Swagger UI 需要内联脚本，API 本身不产出 HTML）
+  app.use(helmet({ contentSecurityPolicy: false }))
+
   // 解析 cookie（登录守卫从 httpOnly cookie 读取会话）
   app.use(cookieParser())
+
+  // 请求追踪：生成/透传 X-Request-Id（AsyncLocalStorage 串联日志，见 request-context.ts）
+  app.use(requestContextMiddleware())
 
   // 对话接口的请求体可能较长，放宽 JSON 体积上限（默认 100kb）
   app.useBodyParser('json', { limit: '2mb' })

@@ -6,6 +6,7 @@ const FALLBACK_MESSAGE = '请求失败，请稍后重试'
 const INTERNAL_ERROR_MESSAGE = '服务器内部错误'
 const PAYLOAD_TOO_LARGE_MESSAGE = '请求体过大，请精简后重试'
 const CONFLICT_MESSAGE = '数据冲突，请稍后重试'
+const RATE_LIMITED_MESSAGE = '请求过于频繁，请稍后再试'
 const NOT_FOUND_MESSAGE = '资源不存在或已被删除'
 const INVALID_JSON_MESSAGE = '请求体不是合法的 JSON'
 const ROUTE_NOT_FOUND_MESSAGE = '接口不存在'
@@ -45,6 +46,8 @@ export function resolveApiMessage(exception: unknown, code: ApiCodeValue): strin
   }
 
   if (code === ApiCode.PAYLOAD_TOO_LARGE) return PAYLOAD_TOO_LARGE_MESSAGE
+
+  if (code === ApiCode.RATE_LIMITED) return RATE_LIMITED_MESSAGE
 
   if (exception instanceof HttpException) {
     const text = readHttpExceptionMessage(exception)

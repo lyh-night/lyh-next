@@ -16,6 +16,20 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # 一次性迁移：用 deps 阶段镜像（含 prisma CLI，生产运行期镜像不带）
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: deps
+    command: sh -c "pnpm --filter @lyh-next/backend exec prisma migrate deploy"
+    environment:
+      DATABASE_URL: ${APP_DATABASE_URL:-postgresql://postgres:postgres@db:5432/lyh-next-db}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
   backend:
     build:
       context: .
@@ -30,9 +44,24 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:-please-change-this-secret}
       AUTH_TOKEN_TTL: ${AUTH_TOKEN_TTL:-7d}
       AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-auth_token}
+      REDIS_URL: redis://redis:6379
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # 限流计数共享存储（多实例时必须；单实例也可留空 REDIS_URL 走内存）
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
     restart: unless-stopped
 
   db:

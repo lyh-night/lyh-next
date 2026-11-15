@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common'
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'
 import { HttpExceptionFilter } from './filters/http-exception.filter.js'
+import { PinoLoggerService } from './logging/pino-logger.service.js'
 import { LoggingInterceptor } from './interceptors/logging.interceptor.js'
 import { TransformInterceptor } from './interceptors/transform.interceptor.js'
 
@@ -10,9 +11,11 @@ import { TransformInterceptor } from './interceptors/transform.interceptor.js'
  */
 @Module({
   providers: [
+    PinoLoggerService,
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
   ],
+  exports: [PinoLoggerService],
 })
 export class CommonModule {}

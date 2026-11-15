@@ -39,7 +39,8 @@
 
 ### 1.3 适用范围
 
-- 适用：`/api/*` 下所有返回 JSON 的接口，含 `GET /api`、`GET /api/health`、`/api/auth/*`、`/api/chat/*`。
+- 适用：`/api/*` 下所有返回 JSON 的接口，含 `GET /api`、`/api/auth/*`、`/api/chat/*`；
+  健康探针（`GET /api/health`、`GET /api/health/live`）输出纯 JSON 不包信封，见 §13.4。
 - 特殊：SSE 成功响应是流，不包信封；写响应头之前的失败仍返回 JSON 信封。
 - 不适用：Swagger UI/静态资源、CORS 预检（204）、反向代理/网关自身返回的 502/504、进程未启动时的连接失败。
 
@@ -935,6 +936,7 @@ pnpm build
 | P1   | 扁平信封 `{ code, message, data, stack? }`；成功不输出 `stack`                                              | 已完成 |
 | P2   | `ApiCode` 码表 + `ApiException`；所有抛错点改用业务码                                                       | 已完成 |
 | P3   | 413 / 非法 JSON / 未知路由归一化；Prisma P2002·P2025；`stack` 生产关闭；`writableEnded` 守卫；日志带 `code` | 已完成 |
+| P4   | 健康探针拆分（live/ready）；全局限流（Throttler）；请求追踪 ID；Prisma 迁移工作流                           | 已完成 |
 
 > P1 与 P2 在同一提交内合并实施：前后端同仓库原子发布，跳过了中间态（`code` 仍为 HTTP 数值）与 §9.5 双写窗口。
 
@@ -951,13 +953,40 @@ pnpm build
 | 访问日志               | `common/interceptors/logging.interceptor.ts`                          |
 | 抛错点                 | `auth/auth.service.ts`、`auth/jwt-auth.guard.ts`、`chat/*.service.ts` |
 | 前端解析               | `apps/frontend/src/utils/api.ts`（`API_CODE` / `isApiEnvelope`）      |
+| 健康探针               | `health/health.controller.ts`（live / ready 双探针）                  |
+| 限流                   | `app.module.ts`（ThrottlerModule + APP_GUARD）+ 控制器 `@Throttle`    |
+| 请求追踪               | `common/request-context/request-context.ts`（AsyncLocalStorage）      |
 
 ### 13.3 明确未做（按 §9.4 / §11.2 定为后续或待定）
 
-- 健康检查未拆 readiness 端点，保持单端点 200 + `data.status`。
 - SSE 错误帧结构未变，未在帧里加 `code: 30012`。
 - 未接入按 `code` 的监控 / 告警指标（属部署侧配置）。
 - 未采用 §9.5 双写窗口。
+
+### 13.4 基础设施契约（P4，2026-11-15）
+
+**健康探针**（纯 JSON，不包信封；`SkipResponseEnvelope` + `SkipThrottle`）：
+
+- `GET /api/health/live` — 存活探针：不探测依赖，进程活着即 `200 { status: 'ok', db: true, uptime, timestamp, version }`。容器 HEALTHCHECK 用它，数据库抖动不重启容器。
+- `GET /api/health` — 就绪探针：`SELECT 1` ping 数据库（2s 超时）。可达 `200 { status: 'ok', ... }`；不可达 `503 { status: 'degraded', db: false, ... }`，编排层据此摘流量。
+
+**限流**（`@nestjs/throttler`，内存存储；超限 `ThrottlerException` 429 → 信封 `code=10006`，文案「请求过于频繁，请稍后再试」，HTTP 恒 200）：
+
+| 范围                                              | 限制        | 来源                                                  |
+| ------------------------------------------------- | ----------- | ----------------------------------------------------- |
+| 全局默认                                          | 300 次/分钟 | `THROTTLE_LIMIT` / `THROTTLE_TTL_SECONDS`（env 可调） |
+| `POST /api/auth/register`、`POST /api/auth/login` | 10 次/分钟  | 控制器 `@Throttle`（防暴破）                          |
+| `POST /api/chat/completions`                      | 20 次/分钟  | 控制器 `@Throttle`（控上游 token 成本）               |
+
+多实例部署配置 `REDIS_URL` 即切换 Redis 存储（throttler-storage-redis + ioredis，compose 已含 redis 服务）；留空走内存存储（单实例）。
+
+**上游韧性**（chat 模块）：连接超时 `CHAT_UPSTREAM_CONNECT_TIMEOUT_MS`（默认 15s，仅约束到收到响应头）；建连失败自动重试一次（响应头未写出前，重试安全），最终 `30010`。
+
+**结构化日志**（pino，`app.useLogger` 接管全部 Nest 日志）：生产环境单行 JSON；开发环境经 pino-pretty 着色（pino-pretty 仅 devDependencies，生产分支不加载）。访问日志字段：`method / path / httpStatus / code / durationMs / requestId / userId`（context=`HTTP`）；超过 `SLOW_REQUEST_MS`（默认 1s）升为 warn 并带 `slow: true`；未预期异常 error 级并带 `stack`。级别由 `LOG_LEVEL`（默认 info）控制。
+
+**请求追踪**：中间件读取或生成 `X-Request-Id`（上限 64 字符），写回响应头并存入 AsyncLocalStorage；HTTP 访问日志带 `requestId / userId`（未登录为 `-`）。网关可透传自有 requestId 串联全链路。
+
+**数据库迁移**：`prisma/migrations/0001_init` 为基线（已在现有库 `migrate resolve` 标记 applied，未动数据）。后续改 schema 用 `pnpm db:migrate`（migrate dev），生产启动用 `pnpm db:deploy`（migrate deploy）；compose 中由一次性 `migrate` 服务（deps 阶段镜像，含 prisma CLI）在 backend 启动前执行。
 
 ---
 

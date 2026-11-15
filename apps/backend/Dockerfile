@@ -50,4 +50,8 @@ WORKDIR /app/apps/backend
 EXPOSE 3001
 ENV PORT=3001
 
+# 存活探针（/api/health/live 不探测依赖，数据库抖动不应重启容器）
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3001/api/health/live || exit 1
+
 CMD ["node", "dist/main.js"]

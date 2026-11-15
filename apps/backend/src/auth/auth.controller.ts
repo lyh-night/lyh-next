@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import { ConfigService } from '@nestjs/config'
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import type { CookieOptions, Response } from 'express'
@@ -31,6 +32,8 @@ export class AuthController {
   }
 
   @Public()
+  // 防暴破：登录/注册 10 次/分钟（全局默认 300 次/分钟）
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('register')
   @HttpCode(200)
   @ApiOperation({ summary: '注册账号' })
@@ -40,6 +43,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   @HttpCode(200)
   @ApiOperation({ summary: '登录（成功后写入 httpOnly cookie）' })

@@ -24,11 +24,13 @@
 
 ## 数据库
 
-| 命令             | 说明                                     |
-| ---------------- | ---------------------------------------- |
-| `pnpm db:push`   | 将 Prisma schema 同步到数据库（backend） |
-| `pnpm db:studio` | 打开 Prisma Studio                       |
-| `pnpm generate`  | 重新生成 Prisma Client                   |
+| 命令              | 说明                                                         |
+| ----------------- | ------------------------------------------------------------ |
+| `pnpm db:migrate` | 创建/应用开发迁移（backend，改 schema 后用）                 |
+| `pnpm db:deploy`  | 应用生产迁移（migrate deploy，backend）                      |
+| `pnpm db:push`    | 将 Prisma schema 直接同步到数据库（backend，仅本地快速试验） |
+| `pnpm db:studio`  | 打开 Prisma Studio                                           |
+| `pnpm generate`   | 重新生成 Prisma Client                                       |
 
 > 以上脚本通过 `pnpm --filter @lyh-next/backend` 切到后端目录执行：schema、`.env` 与 Prisma CLI 都在 `apps/backend`。
 

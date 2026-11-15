@@ -1,5 +1,5 @@
 import { plainToInstance, Type } from 'class-transformer'
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min, MinLength } from 'class-validator'
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min, MinLength } from 'class-validator'
 import { validateSync } from 'class-validator'
 
 /**
@@ -38,6 +38,41 @@ export class EnvVariables {
   @IsOptional()
   @IsString()
   CORS_ORIGINS: string = 'http://localhost:3000'
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'THROTTLE_LIMIT 必须是数字' })
+  @Min(1, { message: 'THROTTLE_LIMIT 必须大于 0' })
+  THROTTLE_LIMIT: number = 300
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'THROTTLE_TTL_SECONDS 必须是数字' })
+  @Min(1, { message: 'THROTTLE_TTL_SECONDS 必须大于 0' })
+  THROTTLE_TTL_SECONDS: number = 60
+
+  @IsOptional()
+  @IsIn(['fatal', 'error', 'warn', 'info', 'debug', 'trace'], {
+    message: 'LOG_LEVEL 必须是 fatal/error/warn/info/debug/trace 之一',
+  })
+  LOG_LEVEL: string = 'info'
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'SLOW_REQUEST_MS 必须是数字' })
+  @Min(1, { message: 'SLOW_REQUEST_MS 必须大于 0' })
+  SLOW_REQUEST_MS: number = 1000
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'CHAT_UPSTREAM_CONNECT_TIMEOUT_MS 必须是数字' })
+  @Min(100, { message: 'CHAT_UPSTREAM_CONNECT_TIMEOUT_MS 不能低于 100' })
+  CHAT_UPSTREAM_CONNECT_TIMEOUT_MS: number = 15_000
+
+  @IsOptional()
+  @IsString()
+  /** 多实例部署时必填（限流计数共享），单实例留空走内存存储 */
+  REDIS_URL: string = ''
 }
 
 /**

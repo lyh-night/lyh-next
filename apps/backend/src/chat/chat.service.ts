@@ -1,4 +1,5 @@
 import { BadRequestException, HttpStatus, Injectable, Logger } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { ApiCode } from '../common/errors/api-code.js'
 import { ApiException } from '../common/errors/api.exception.js'
 import type { AiModel } from '../generated/prisma/client.js'
@@ -39,6 +40,7 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly models: ModelsService,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -111,41 +113,61 @@ export class ChatService {
   async openUpstream(turn: PreparedTurn, signal: AbortSignal): Promise<ReadableStream<Uint8Array>> {
     const { model } = turn
     const url = `${model.baseUrl.replace(/\/+$/, '')}/chat/completions`
+    const connectTimeoutMs = this.config.getOrThrow<number>('CHAT_UPSTREAM_CONNECT_TIMEOUT_MS')
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), CONNECT_TIMEOUT_MS)
-    const combined = AbortSignal.any([signal, controller.signal])
+    // 超时只约束「建连 + 收到响应头」；fetch 已返回后 clearTimeout，长流式输出不受影响
+    // 建连失败（网络错误/超时）时还没向客户端写任何字节，可安全重试一次
+    const maxAttempts = 2
+    let response: Response | undefined
+    let failure: 'timeout' | 'network' = 'network'
 
-    let response: Response
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${model.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: model.model,
-          messages: turn.messages,
-          stream: true,
-          ...(turn.temperature !== undefined ? { temperature: turn.temperature } : {}),
-          ...(turn.maxTokens !== undefined ? { max_tokens: turn.maxTokens } : {}),
-        }),
-        signal: combined,
-      })
-    } catch {
-      // 客户端已断开时响应无处可写，保留标准异常即可（兜底为 10001）
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       if (signal.aborted) throw new BadRequestException('客户端已断开')
-      if (controller.signal.aborted) {
+
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), connectTimeoutMs)
+      const combined = AbortSignal.any([signal, controller.signal])
+
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${model.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: model.model,
+            messages: turn.messages,
+            stream: true,
+            ...(turn.temperature !== undefined ? { temperature: turn.temperature } : {}),
+            ...(turn.maxTokens !== undefined ? { max_tokens: turn.maxTokens } : {}),
+          }),
+          signal: combined,
+        })
+        break
+      } catch {
+        // 客户端已断开时响应无处可写，保留标准异常即可（兜底为 10001）
+        if (signal.aborted) throw new BadRequestException('客户端已断开')
+
+        failure = controller.signal.aborted ? 'timeout' : 'network'
+        if (attempt < maxAttempts) {
+          this.logger.warn(
+            `上游建连失败（第 ${attempt} 次尝试，${failure === 'timeout' ? '连接超时' : '网络错误'}），重试中`,
+          )
+          continue
+        }
         throw new ApiException(
           ApiCode.CHAT_UPSTREAM_ERROR,
-          'AI 上游连接超时',
+          failure === 'timeout' ? 'AI 上游连接超时' : 'AI 上游连接失败',
           HttpStatus.BAD_GATEWAY,
         )
+      } finally {
+        clearTimeout(timeout)
       }
+    }
+
+    if (!response) {
       throw new ApiException(ApiCode.CHAT_UPSTREAM_ERROR, 'AI 上游连接失败', HttpStatus.BAD_GATEWAY)
-    } finally {
-      clearTimeout(timeout)
     }
 
     if (!response.ok) return await this.throwUpstreamError(response)
