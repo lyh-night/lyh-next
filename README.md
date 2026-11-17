@@ -16,10 +16,6 @@
 | 工程化   | pnpm workspaces、Turborepo、tsdown                 |
 | 代码规范 | ESLint、Prettier、Husky、Lint-Staged、Commitlint   |
 
-## 预览
-
-![screenshot](./docs/image.png)
-
 ## 入门指南
 
 ### 前置条件
