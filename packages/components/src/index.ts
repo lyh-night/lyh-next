@@ -9,6 +9,8 @@
  * 约定：同一功能的组件只保留 shadcn/ui 版本。
  */
 
+export * from './common/confirm-dialog'
+export * from './common/empty-state'
 export * from './shadcn/button'
 export * from './shadcn/dialog'
 export * from './shadcn/dropdown-menu'

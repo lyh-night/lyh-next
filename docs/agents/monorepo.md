@@ -35,7 +35,7 @@
 
 - 不改任何业务逻辑、不改页面行为、不改 UI 表现（纯结构调整）。
 - 不把 `src/app/components/**`（workflow / header / ThemeSwitch）包化，它们仍属于应用。
-- 不包化 `src/server`、`src/provider`、`src/generated/prisma`、`src/middleware.ts`、`src/utils/clipboard.ts`。
+- 不包化 `src/server`、`src/provider`、`src/generated/prisma`、`src/middleware.ts`。
 - 不引入测试框架、CI、Changesets、共享 ESLint/TS 配置包、`pnpm catalog`。
 - 不发布到 npm：三个包全部 `"private": true`。
 - 不更新 `README.md` / `AGENTS.md` / `docs/agents/commands.md`（列为阶段 5 的收尾项，见 §14）。
@@ -145,7 +145,7 @@ lyh-next/
 | ---------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | `@lyh-next/utils`      | 库包（编译产物）     | `formatNumber` / `formatFileSize` / `formatTime` / `downloadFile`（来自 `format.ts`）+ `cn`（来自 `classnames.ts`） | `tsdown` → `dist/*.js` + `dist/*.d.ts` |
 | `@lyh-next/components` | 库包（**源码直出**） | `shadcn/*`（15）、`tooltip/*`（3，含 `TooltipManager`）、`popover`、`portal-to-follow-elem`，共 20 文件             | 不编译；仅 `tsc --noEmit` 做类型校验   |
-| `@lyh-next/frontend`   | 应用（private）      | 页面、业务组件、provider、server、prisma、styles、middleware、`utils/clipboard.ts`                                  | `next build`（standalone）             |
+| `@lyh-next/frontend`   | 应用（private）      | 页面、业务组件、provider、server、prisma、styles、middleware、应用级 utils                                          | `next build`（standalone）             |
 
 ### 4.2 依赖方向（强约束）
 
@@ -433,7 +433,7 @@ export default nextConfig
 | 2   | `src/utils/format.ts`                                                                      | `packages/utils/src/format.ts`                | 移动，内容不变                                                               |
 | 3   | `src/utils/classnames.ts`                                                                  | `packages/utils/src/classnames.ts`            | 移动，内容不变，由 `index.ts` 导出 `cn`                                      |
 | 4   | `packages/utils/src/index.ts`                                                              | —                                             | **新建**（`export * from './format'` + `export { cn } from './classnames'`） |
-| 5   | `src/utils/clipboard.ts`                                                                   | `apps/frontend/src/utils/clipboard.ts`        | 留在应用内（非目标）                                                         |
+| 5   | `src/utils/clipboard.ts`                                                                   | `packages/utils/src/clipboard.ts`             | 已下沉公共包（`@lyh-next/utils`）                                            |
 | 6   | `src/app/**`（含 `src/app/components/**`）                                                 | `apps/frontend/src/app/**`                    | 移动，目录结构不变                                                           |
 | 7   | `src/provider/`、`src/server/`、`src/middleware.ts`、`src/generated/prisma/`               | `apps/frontend/src/` 对应位置                 | 移动                                                                         |
 | 8   | `src/styles/`（4 个 CSS）                                                                  | `apps/frontend/src/styles/`                   | 移动；`index.css` 增加 `@source`（§9）                                       |

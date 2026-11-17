@@ -1,3 +1,8 @@
+/**
+ * 复制文本到剪贴板：优先 Clipboard API，回退 execCommand。
+ *
+ * @remarks 仅 client 侧调用（依赖 navigator / document）。
+ */
 export async function writeTextToClipboard(text: string): Promise<void> {
   if (navigator.clipboard && navigator.clipboard.writeText)
     return navigator.clipboard.writeText(text)

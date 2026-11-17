@@ -10,10 +10,11 @@
 apps/
   frontend/              # @lyh-next/frontend
     src/
-      app/               # App Router 页面 + app 内业务组件
+      app/               # App Router 页面（页面壳只做组合）
+      components/        # app 内业务组件（chat / settings / header / workflow …）
       provider/          # SessionProvider（会话状态，登录由后端 cookie 承载）
       styles/            # 全局样式（Tailwind 入口）
-      utils/             # 应用内工具（clipboard / api 后端地址）
+      utils/             # 应用级工具（api 后端地址 / 时间格式化 / 草稿存取）
       middleware.ts
     public/              # 静态资源
     .env                 # AUTH_SECRET 与后端地址相关变量
@@ -89,15 +90,36 @@ apps/backend  → 独立（不依赖 packages/*）
 
 禁止放置复杂业务逻辑。
 
-### apps/frontend/src/app/components
+### apps/frontend/src/components
 
-App Router 业务页面内使用的组件，例如 workflow、header、ThemeSwitch、chat。
+App Router 业务页面内使用的组件，按功能分包：`chat/`、`settings/`、`header/`、`workflow/`、`ThemeSwitch/`。
 
 要求：
 
 - 仅服务于 app 内页面组合
 - 业务范围应清晰
-- 可复用到全局时迁移到 `packages/components`
+- 可复用到全局时迁移到 `packages/components`（判定规则见 [AGENTS.md 四、前端组件与代码拆分规则](../../AGENTS.md)）
+
+功能目录按页面结构组织一行子目录 + `hooks/`，根目录只留 `index.tsx`（组合）、`types.ts`、`api.ts`、
+`stream.ts`（传输层）。对话页当前结构：
+
+```
+components/chat/
+├─ index.tsx                 # ChatWorkspace：侧栏 + 消息区 + 输入区 + 设置弹窗
+├─ types.ts / api.ts / stream.ts   # 类型、JSON 接口封装、SSE 传输层
+├─ hooks/                    # 交互与状态（副作用只允许出现在这里或 utils）
+│  ├─ use-chat.ts            # 组合 3 个领域 hook，对外 ChatController
+│  ├─ use-conversation-list.ts   # 列表刷新/分页/重命名/删除
+│  ├─ use-chat-history.ts    # 历史加载与游标分页
+│  ├─ use-chat-stream.ts     # 发送/流式/delta 节流/停止/重试
+│  ├─ use-column-width.ts    # 内容列宽度、持久化与拖拽手势
+│  ├─ use-message-scroll.ts  # 贴底跟随、阅读位置、点击定位
+│  └─ use-composer-draft.ts  # 草稿恢复与持久化
+├─ sidebar/                  # 会话侧栏（组合 + 搜索 + 列表 + 列表项 + 两个弹窗）
+├─ messages/                 # 消息区（滚动容器、气泡、错误行、元信息、预览条、空态、拖拽把手）
+├─ composer/                 # 输入区与模型选择
+└─ markdown/                 # Markdown 渲染、代码块、Shiki 高亮单例
+```
 
 ### apps/frontend/src/app/api
 
@@ -111,7 +133,8 @@ Route Handler 入口。
 
 ### packages/components
 
-公共组件（源码包，应用直接消费 `.tsx`）。
+公共组件（源码包，应用直接消费 `.tsx`），分两类：`src/shadcn/`（CLI 生成的基础组件）与
+`src/common/`（业务无关的组合组件，如 `ConfirmDialog`、`EmptyState`）。
 
 要求：
 
@@ -124,7 +147,7 @@ Route Handler 入口。
 
 ### packages/utils
 
-纯函数工具包，用 tsdown 构建为 ESM + d.ts。
+纯函数工具包（格式化、剪贴板等跨应用通用能力），用 tsdown 构建为 ESM + d.ts。
 
 要求：
 

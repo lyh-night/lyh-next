@@ -5,12 +5,7 @@ import { toast } from 'sonner'
 
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  ConfirmDialog,
   Switch,
   Table,
   TableBody,
@@ -205,28 +200,19 @@ export default function ModelTab() {
         </Table>
       )}
 
-      <Dialog open={Boolean(removing)} onOpenChange={(open) => !open && setRemoving(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>删除模型</DialogTitle>
-            <DialogDescription>
-              确定删除「{removing?.displayName}」吗？删除后历史对话仍保留，但该模型不能再被调用。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRemoving(null)} disabled={removingPending}>
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void confirmRemove()}
-              disabled={removingPending}
-            >
-              {removingPending ? '删除中…' : '删除'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={Boolean(removing)}
+        onOpenChange={(open) => !open && setRemoving(null)}
+        title="删除模型"
+        description={
+          <>确定删除「{removing?.displayName}」吗？删除后历史对话仍保留，但该模型不能再被调用。</>
+        }
+        confirmText="删除"
+        destructive
+        pending={removingPending}
+        pendingText="删除中…"
+        onConfirm={() => void confirmRemove()}
+      />
     </div>
   )
 }

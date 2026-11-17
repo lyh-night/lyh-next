@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@lyh-next/components'
 import { cn } from '@lyh-next/utils'
-import type { ChatModel } from './types'
+import type { ChatModel } from '../types'
 
 interface ModelSelectProps {
   models: ChatModel[]

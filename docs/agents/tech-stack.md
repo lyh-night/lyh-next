@@ -63,7 +63,7 @@
 
 - axios（前端统一 JSON 请求，`apps/frontend/src/utils/api.ts`）
 - eventsource-parser（SSE 解析：对话流式接口，`apps/frontend/src/components/chat/stream.ts`）
-- react-markdown + remark-gfm（对话回复 Markdown 渲染，`apps/frontend/src/components/chat/markdown.tsx`）
+- react-markdown + remark-gfm（对话回复 Markdown 渲染，`apps/frontend/src/components/chat/markdown/markdown.tsx`）
 - ahooks
 - lodash-es
 - clsx

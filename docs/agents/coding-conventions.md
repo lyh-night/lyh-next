@@ -54,13 +54,16 @@ Zod Schema 应作为类型来源。
 
 ## 三、命名规范
 
-| 类型    | 规范               | 示例              |
-| ------- | ------------------ | ----------------- |
-| 组件    | PascalCase         | `UserCard.tsx`    |
-| Hook    | use 前缀           | `useUser.ts`      |
-| Service | `.service.ts` 后缀 | `user.service.ts` |
-| Action  | `.action.ts` 后缀  | `user.action.ts`  |
-| Type    | `.types.ts` 后缀   | `user.types.ts`   |
+| 类型    | 规范                                 | 示例              |
+| ------- | ------------------------------------ | ----------------- |
+| 组件    | 文件名 kebab-case，导出名 PascalCase | `user-card.tsx`   |
+| Hook    | `use-` 前缀 + kebab-case             | `use-user.ts`     |
+| Service | `.service.ts` 后缀                   | `user.service.ts` |
+| Action  | `.action.ts` 后缀                    | `user.action.ts`  |
+| Type    | `.types.ts` 后缀                     | `user.types.ts`   |
+
+> 必须独立成文件的组件（弹窗、列表项、气泡、工具条等）见
+> [AGENTS.md 四、前端组件与代码拆分规则](../../AGENTS.md)。
 
 ---
 
@@ -78,7 +81,7 @@ Component → Hook → Service → API
 - 后端响应为扁平信封 `{ code, message, data, stack? }`；成功判断看 `code === 0`，由拦截器完成；失败码是业务码（见 `docs/features/err-handing.md`）。
 - 公开接口（登录、注册、登出、`/me`）必须传 `skipAuthRedirect: true`，避免业务失败（如密码错误 `20001`）触发全局跳登录。
 - 后端 JSON 接口成功与业务失败都返回 HTTP 200；新增 `POST` 路由记得加 `@HttpCode(200)`，避免 Nest 默认 201。
-- SSE / 流式接口不在该封装内处理，后续统一使用 `fetch-event-source`。
+- SSE / 流式接口不在该封装内处理：对话流由 `apps/frontend/src/components/chat/stream.ts` 单独实现（`fetch` + `eventsource-parser/stream`，不做自动重连）。
 
 ---
 

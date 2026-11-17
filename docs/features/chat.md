@@ -508,18 +508,43 @@ for (;;) {
 ```
 src/app/chat/page.tsx                # 页面壳（Server Component + Suspense）
 src/components/chat/
-├─ index.tsx           # 布局：左会话栏常驻 + 右消息区；内容列宽度可拖拽并持久化（localStorage）
-├─ conversation-list.tsx   # 会话列表：按 今天/昨天/近 7 天/更早 分组、搜索过滤、重命名与删除弹窗
-├─ message-list.tsx        # 贴底跟随、回到底部、右缘消息历史预览条（悬浮预览/点击定位）
-├─ message-bubble.tsx      # 用户气泡 / assistant Markdown、错误与中断行（带「重试」）、悬浮复制（copied 反馈）
-├─ composer.tsx / model-select.tsx   # 输入区（自动增高、字数、停止、按会话持久化草稿）与模型 Popover（空态可弹）
-├─ markdown.tsx        # react-markdown + remark-gfm + remark-math/rehype-katex（数学公式）；代码块语言标签、复制、换行开关，Shiki 高亮按语言懒加载（JS 引擎免 WASM，github-light/dark 双主题）
-├─ highlighter.ts      # Shiki 懒加载单例：语法包动态 import、常见别名归一化、失败回退纯文本
-├─ api.ts              # 会话/历史/模型 JSON 封装（走 utils/api 的 request）
-├─ stream.ts           # SSE 传输层：fetch + EventSourceParserStream，不重连
-├─ use-chat.ts         # 状态机：乐观更新 / delta 60ms 节流 / URL ?c=<id> / 历史游标分页
-└─ types.ts
+├─ index.tsx           # ChatWorkspace：侧栏 + 消息区 + 输入区；内容列宽度可拖拽并持久化（localStorage）
+├─ api.ts / stream.ts / types.ts     # JSON 接口封装、SSE 传输层（不重连）、共享类型
+├─ hooks/              # 交互与业务逻辑（组件内不请求接口、不写 localStorage）
+│  ├─ use-chat.ts              # 对外 controller：组合三个领域 hook + 模型列表 + URL 同步 + 初始化
+│  ├─ use-conversation-list.ts # 会话列表：刷新、分页、重命名、删除
+│  ├─ use-chat-history.ts      # 历史加载与「加载更早」游标分页（seq 防竞态）
+│  ├─ use-chat-stream.ts       # 发送/流式/delta 60ms 节流/停止/重试最后一轮
+│  ├─ use-column-width.ts      # 内容列宽度：持久化、消息区宽度感知、拖拽手势
+│  ├─ use-message-scroll.ts    # 贴底跟随、回到底部、阅读位置（scrollspy）、点击定位
+│  └─ use-composer-draft.ts    # 草稿按会话恢复/持久化、建议预填
+├─ sidebar/            # 会话侧栏
+│  ├─ conversation-sidebar.tsx      # 组合：新建 + 搜索 + 分组列表 + 设置入口 + 两个弹窗
+│  ├─ conversation-search.tsx       # 受控搜索输入
+│  ├─ conversation-list.tsx         # 今天/昨天/近 7 天/更早 分组、搜索过滤、加载更多
+│  ├─ conversation-item.tsx         # 单个会话项（相对时间、消息数、hover 操作）
+│  ├─ rename-conversation-dialog.tsx # 重命名弹窗（Enter 提交、IME 守卫）
+│  └─ delete-conversation-dialog.tsx # 删除确认（复用 packages/components 的 ConfirmDialog）
+├─ messages/           # 消息区
+│  ├─ message-area.tsx              # 滚动容器 + 加载更早 + 空态 + 消息行 + 回到底部
+│  ├─ empty-state.tsx               # 无模型引导 / 欢迎 hero（场景建议 chips）
+│  ├─ message-bubble.tsx            # 角色分派（user / assistant）
+│  ├─ user-message.tsx              # 用户气泡与时间
+│  ├─ assistant-message.tsx         # Markdown 正文、状态行、元信息、悬浮复制
+│  ├─ message-error.tsx             # 失败/已停止行（重试、30003 打开设置）
+│  ├─ message-meta.tsx              # 模型名 + token 用量
+│  ├─ message-rail.tsx              # 右缘预览条与悬浮预览面板
+│  └─ column-resize-handle.tsx      # 内容列拖拽把手（手势在 use-column-width）
+├─ composer/           # 输入区
+│  ├─ composer.tsx                  # 自适应高度、字数上限、发送/停止
+│  └─ model-select.tsx              # 模型 Popover（空态可弹）
+└─ markdown/           # 渲染层
+   ├─ markdown.tsx      # react-markdown + remark-gfm + remark-math/rehype-katex；组件映射
+   ├─ code-block.tsx    # 语言标签、复制、换行开关、Shiki 懒加载（JS 引擎免 WASM，双主题）
+   └─ highlighter.ts    # Shiki 单例：语法包动态 import、别名归一化、失败回退纯文本
 ```
+
+拆分与落位规则见 [AGENTS.md 四、前端组件与代码拆分规则](../../AGENTS.md)。
 
 约定：
 

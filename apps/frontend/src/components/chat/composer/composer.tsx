@@ -1,33 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { ArrowUp, Square } from 'lucide-react'
 import { Button, Textarea } from '@lyh-next/components'
+import { useComposerDraft } from '../hooks/use-composer-draft'
 import { ModelSelect } from './model-select'
-import type { ChatModel } from './types'
+import type { ChatModel } from '../types'
 
 const CONTENT_MAX_CHARS = 8000
 /** Textarea 自适应最大高度（8 行左右） */
 const MAX_TEXTAREA_HEIGHT = 192
-/** 草稿在 localStorage 中的键前缀，完整键为 `chat:draft:<draftKey>` */
-const DRAFT_KEY_PREFIX = 'chat:draft:'
-
-function readDraft(key: string): string {
-  try {
-    return window.localStorage.getItem(DRAFT_KEY_PREFIX + key) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-function writeDraft(key: string, value: string) {
-  try {
-    if (value) window.localStorage.setItem(DRAFT_KEY_PREFIX + key, value)
-    else window.localStorage.removeItem(DRAFT_KEY_PREFIX + key)
-  } catch {
-    // 存储不可用（隐私模式等）时静默
-  }
-}
 
 interface ComposerProps {
   models: ChatModel[]
@@ -44,6 +26,7 @@ interface ComposerProps {
   onStop: () => void
 }
 
+/** 输入区：草稿恢复/持久化、自适应高度、字数上限、发送与停止 */
 export function Composer({
   models,
   modelId,
@@ -55,25 +38,12 @@ export function Composer({
   onSend,
   onStop,
 }: ComposerProps) {
-  const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { value, setValue, reset } = useComposerDraft({ draftKey, seed })
 
-  // 切换会话时恢复该会话的草稿（两段式：默认空串，挂载后再读，避免 hydration 不一致）
+  // 欢迎 hero 建议预填后聚焦输入框
   useEffect(() => {
-    setValue(readDraft(draftKey))
-  }, [draftKey])
-
-  // 草稿防抖持久化；发送后清空的 '' 会触发 removeItem
-  useEffect(() => {
-    const timer = window.setTimeout(() => writeDraft(draftKey, value), 300)
-    return () => window.clearTimeout(timer)
-  }, [draftKey, value])
-
-  // 欢迎 hero 建议：预填提示模板并聚焦（nonce 变化才触发，同文本可重复点击）
-  useEffect(() => {
-    if (!seed) return
-    setValue(seed.text)
-    textareaRef.current?.focus()
+    if (seed) textareaRef.current?.focus()
   }, [seed])
 
   // 内容变化后自适应高度（field-sizing 在部分浏览器不可用，JS 兜底）
@@ -92,7 +62,7 @@ export function Composer({
   const submit = () => {
     if (!canSend) return
     onSend(trimmed)
-    setValue('')
+    reset()
     // 发送后聚焦，连续对话不用再点输入框
     requestAnimationFrame(() => textareaRef.current?.focus())
   }
