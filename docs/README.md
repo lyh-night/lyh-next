@@ -1,6 +1,6 @@
 # docs 目录结构
 
-文档按用途分两个目录归档，索引入口在根 [AGENTS.md](../AGENTS.md) 的「文档索引」。
+文档按用途分目录归档：`docs/agents/` 的索引入口在根 [AGENTS.md](../AGENTS.md) 的「文档索引」，`docs/features/` 与 `docs/research/` 由本文件索引。
 
 ## docs/agents/ — 开发规范与指南
 
@@ -14,7 +14,6 @@
 | [coding-conventions.md](agents/coding-conventions.md)   | TypeScript、样式、命名、接口、错误处理、性能   |
 | [ai-guidelines.md](agents/ai-guidelines.md)             | AI 修改代码的规范、禁止事项、提交检查清单      |
 | [commands.md](agents/commands.md)                       | 开发、构建、数据库和 Docker 部署命令           |
-| [monorepo.md](agents/monorepo.md)                       | 包边界、迁移映射、配置改造与验收标准           |
 
 ## docs/features/ — 功能与契约文档
 
@@ -22,6 +21,7 @@
 
 | 文档                                      | 内容                                                       |
 | ----------------------------------------- | ---------------------------------------------------------- |
+| [monorepo.md](features/monorepo.md)       | 包边界、迁移映射、配置改造与验收标准                       |
 | [chat.md](features/chat.md)               | AI 对话：chat 模块、模型配置、多轮记忆、SSE 协议、重试链路 |
 | [auth.md](features/auth.md)               | 登录认证：Nest 托管会话、cookie 规格、全局守卫             |
 | [err-handing.md](features/err-handing.md) | 响应与错误处理：扁平信封、业务码表、过滤器与日志契约       |
@@ -37,4 +37,4 @@
 
 - 根目录 `image.png` 为 README 截图，不是文档。
 - 文档内互相引用使用仓库根相对路径（`docs/agents/xxx.md`、`docs/features/xxx.md`）。
-- 新功能合并时同步更新：本 README 表格 + AGENTS.md「文档索引」的功能分组。
+- 新功能合并时只更新本 README 表格（功能文档不进 AGENTS.md，避免其随功能膨胀）。

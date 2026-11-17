@@ -98,7 +98,7 @@ App Router 业务页面内使用的组件，按功能分包：`chat/`、`setting
 
 - 仅服务于 app 内页面组合
 - 业务范围应清晰
-- 可复用到全局时迁移到 `packages/components`（判定规则见 [AGENTS.md 四、前端组件与代码拆分规则](../../AGENTS.md)）
+- 可复用到全局时迁移到 `packages/components`（判定规则见 [coding-conventions.md §七](coding-conventions.md)）
 
 功能目录按页面结构组织一行子目录 + `hooks/`，根目录只留 `index.tsx`（组合）、`types.ts`、`api.ts`、
 `stream.ts`（传输层）。对话页当前结构：

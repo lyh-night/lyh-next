@@ -544,8 +544,6 @@ src/components/chat/
    └─ highlighter.ts    # Shiki 单例：语法包动态 import、别名归一化、失败回退纯文本
 ```
 
-拆分与落位规则见 [AGENTS.md 四、前端组件与代码拆分规则](../../AGENTS.md)。
-
 约定：
 
 - **视觉规范**（AI-Native 精修，参考 `.agent/skills/frontend-design`）：次级文字 11–13px 三级弱化、

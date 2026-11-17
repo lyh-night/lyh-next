@@ -62,8 +62,7 @@ Zod Schema 应作为类型来源。
 | Action  | `.action.ts` 后缀                    | `user.action.ts`  |
 | Type    | `.types.ts` 后缀                     | `user.types.ts`   |
 
-> 必须独立成文件的组件（弹窗、列表项、气泡、工具条等）见
-> [AGENTS.md 四、前端组件与代码拆分规则](../../AGENTS.md)。
+> 组件拆分、必须独立成件的约定见本文件 §七。
 
 ---
 
@@ -115,3 +114,37 @@ Component → Hook → Service → API
 
 - 无意义 `useEffect`
 - 重复请求
+
+---
+
+## 七、组件与代码拆分
+
+拆分以职责与交互边界为准，**不以行数硬卡**：先判断是否职责混杂、能否独立复用或独立测试；行数只是提示信号，
+职责单一时代码长一些也可以，避免为凑行数制造碎片组件。
+
+### 目录按页面结构组织
+
+- 功能组件放 `apps/frontend/src/components/<feature>/`，一级子目录对应页面结构单元（对话页为
+  `sidebar/`、`messages/`、`composer/`、`markdown/`），交互与状态放 `hooks/`
+- 功能根目录只保留 `index.tsx`（组合）、`types.ts`（共享类型）、`api.ts`（接口封装）、
+  `stream.ts`（SSE 等特殊传输层）
+
+### 组件粒度
+
+- 一个组件对应一个用户可见单元；弹窗、确认框、列表项、气泡、工具条都独立成文件，不内联在父组件
+- 组件只做渲染与局部 UI 状态（open / copied / hover），不请求接口、不读写 localStorage、不编排业务
+
+### 交互逻辑与业务逻辑分离
+
+- 请求、流式、定时器、localStorage、URL 同步等副作用只出现在 `hooks/` 或 `utils/`
+- 一个领域一个 `use-*.ts`；`use-<feature>.ts` 只做组合与对外 controller，导出结构保持稳定
+- 数据流固定：`Component → Hook → api.ts → utils/api.ts`
+
+### 纯函数与公共组件去向
+
+| 内容                                         | 去处                                                                                          |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 跨应用通用、无业务语义/产品文案              | `packages/utils/src/`（经 `@lyh-next/utils` 导出；含 `window`/`document` 须标注 client-only） |
+| 应用语义（依赖业务类型、中文文案、接口约定） | `apps/frontend/src/utils/*.ts`（只允许 type-only 引用 app 类型，不 import 组件实现）          |
+| 仅单一组件使用                               | 与该组件同文件（可留模块级函数）                                                              |
+| 无业务耦合、可复用的 UI 组合                 | `packages/components/src/common/`，并在 `src/index.ts` re-export；依赖业务数据的留在应用内    |
