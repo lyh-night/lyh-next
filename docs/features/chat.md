@@ -516,7 +516,7 @@ src/components/chat/
 │  ├─ use-chat-history.ts      # 历史加载与「加载更早」游标分页（seq 防竞态）
 │  ├─ use-chat-stream.ts       # 发送/流式/delta 60ms 节流/停止/重试最后一轮
 │  ├─ use-column-width.ts      # 内容列宽度：持久化、消息区宽度感知、拖拽手势
-│  ├─ use-message-scroll.ts    # 贴底跟随、回到底部、阅读位置（scrollspy）、点击定位
+│  ├─ use-message-scroll.ts    # 贴底跟随、回到底部、阅读位置（二分 scrollspy）、点击定位、前插锚点补偿
 │  └─ use-composer-draft.ts    # 草稿按会话恢复/持久化、建议预填
 ├─ sidebar/            # 会话侧栏
 │  ├─ conversation-sidebar.tsx      # 组合：新建 + 搜索 + 分组列表 + 设置入口 + 两个弹窗
@@ -533,7 +533,7 @@ src/components/chat/
 │  ├─ assistant-message.tsx         # Markdown 正文、状态行、元信息、悬浮复制
 │  ├─ message-error.tsx             # 失败/已停止行（重试、30003 打开设置）
 │  ├─ message-meta.tsx              # 模型名 + token 用量
-│  ├─ message-rail.tsx              # 右缘预览条与悬浮预览面板
+│  ├─ message-rail.tsx              # 右缘预览条（等距刻度 + 视口窗口化）与悬浮预览面板
 │  └─ column-resize-handle.tsx      # 内容列拖拽把手（手势在 use-column-width）
 ├─ composer/           # 输入区
 │  ├─ composer.tsx                  # 自适应高度、字数上限、发送/停止
@@ -563,6 +563,17 @@ src/components/chat/
   （后端已删除占位消息）。
 - **Markdown**：`react-markdown` + `remark-gfm`，不解析裸 HTML（无 XSS 面）；delta 按 60ms 节流合并
   后再渲染，避免逐帧全量重解析；代码块用等宽样式 + 复制按钮，语法高亮（Shiki）留作后续。
+- **长会话渲染（对照 DSH）**：首屏只取最近 50 条，向上每次按 `messageId` 游标前插 50 条；消息行保持全量
+  渲染，不做逐行虚拟化（与 DSH 一致：transcript 只反映已加载窗口，成本重头不在行数而在 O(n) 交互）。
+  随数据量增长的 O(n) 点已消除：
+  - 阅读位置（scrollspy）改为对消息行二分，每帧约 `log₂n` 次几何读取（DSH `readVisibleTurn` 同思路），
+    滚动事件用 `requestAnimationFrame` 合帧；
+  - 右缘预览条改为等距刻度（20px 槽位）+ 视口窗口化 + 激活刻度跟随（指针进入轨道时暂停），刻度 DOM
+    不随消息数增长（DSH `TurnNavigatorRail` 用 `@tanstack/react-virtual`；我们槽位等距，纯算术即可，不引依赖）；
+  - 加载更早：读者不在顶部边缘时用首条消息的屏幕坐标做语义锚点补偿（原生滚动锚定已补偿时不二次位移），
+    在顶部点按钮加载时仍按原行为直接展示新页；只在贴底时把滚动容器设为 `overflow-anchor: none`
+    （避免自动锚定与贴底跟随互相拉扯，DSH 同策略）。
+- 若已加载窗口继续膨胀，下一步按 DSH 的做法引入 `@tanstack/react-virtual` 做消息行虚拟化（本次未做）。
 
 ### 8.1 设置弹窗（模型配置管理）
 

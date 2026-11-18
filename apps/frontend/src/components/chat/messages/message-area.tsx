@@ -43,7 +43,7 @@ export function MessageArea({
   onPickSuggestion,
 }: MessageAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const { showJump, activeIndex, handleScroll, jumpToBottom, locateMessage } = useMessageScroll({
+  const { stick, activeIndex, handleScroll, jumpToBottom, locateMessage } = useMessageScroll({
     containerRef,
     messages,
   })
@@ -53,6 +53,7 @@ export function MessageArea({
       <div
         ref={containerRef}
         onScroll={handleScroll}
+        style={{ overflowAnchor: stick ? 'none' : 'auto' }}
         className="motion-safe:animate-in motion-safe:fade-in h-full overflow-y-auto px-4 py-6 motion-safe:duration-500 md:px-6"
       >
         {hasMoreHistory && messages.length > 0 && (
@@ -110,7 +111,7 @@ export function MessageArea({
 
       <ColumnResizeHandle control={column} />
 
-      {showJump && (
+      {!stick && (
         <button
           type="button"
           onClick={jumpToBottom}
