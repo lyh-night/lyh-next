@@ -451,7 +451,7 @@ POST /api/chat/completions
 - 密钥安全：`apiKey` 目前**明文**存库（与 Prisma 默认一致），接口与日志都不会输出；
   后续可加 `ENCRYPTION_KEY` 做 AES 加密（见"非目标"）。
 - 代理部署：SSE 需要关掉缓冲（已返回 `X-Accel-Buffering: no`，nginx 侧也可 `proxy_buffering off`）。
-- 鉴权：`/api/chat/*` 需要登录（Nest 全局 `JwtAuthGuard` + httpOnly cookie）；浏览器侧 JSON 请求统一走 `src/utils/api.ts` 的 axios `request`（已默认 `withCredentials: true`），SSE 在 `components/chat/stream.ts` 单独实现：`fetch` + `eventsource-parser/stream` 解析（POST + `credentials: 'include'`），**不做自动重连**（重连会重复计费/落库），失败由用户重试。
+- 鉴权：`/api/chat/*` 需要登录（Nest 全局 `JwtAuthGuard` + httpOnly cookie）；浏览器侧 JSON 请求统一走 `src/utils/api.ts` 的 axios `request`（已默认 `withCredentials: true`），SSE 在 `components/chat/stream.ts` 实现：`fetch` + `eventsource-parser/stream` 分帧（`src/utils/sse.ts`）再按 `stream-protocol.ts` 解析（POST + `credentials: 'include'`），**不做自动重连**（重连会重复计费/落库），失败由用户重试。
 
 ---
 
@@ -509,7 +509,9 @@ for (;;) {
 src/app/chat/page.tsx                # 页面壳（Server Component + Suspense）
 src/components/chat/
 ├─ index.tsx           # ChatWorkspace：侧栏 + 消息区 + 输入区；内容列宽度可拖拽并持久化（localStorage）
-├─ api.ts / stream.ts / types.ts     # JSON 接口封装、SSE 传输层（不重连）、共享类型
+├─ api.ts / types.ts                 # JSON 接口封装、共享类型
+├─ stream.ts                         # SSE 传输与生命周期（fetch / 响应头 / 信封错误 / 幂等收尾，不重连）
+├─ stream-protocol.ts                # SSE 帧的对话语义（[DONE] / delta / backend_stream_error）
 ├─ hooks/              # 交互与业务逻辑（组件内不请求接口、不写 localStorage）
 │  ├─ use-chat.ts              # 对外 controller：组合三个领域 hook + 模型列表 + URL 同步 + 初始化
 │  ├─ use-conversation-list.ts # 会话列表：刷新、分页、重命名、删除
@@ -563,6 +565,10 @@ src/components/chat/
   （后端已删除占位消息）。
 - **Markdown**：`react-markdown` + `remark-gfm`，不解析裸 HTML（无 XSS 面）；delta 按 60ms 节流合并
   后再渲染，避免逐帧全量重解析；代码块用等宽样式 + 复制按钮，语法高亮（Shiki）留作后续。
+- **SSE 分层**：分帧在 `src/utils/sse.ts`（`decodeSseFrames`，只做 decoder + parser，不解析 JSON）；帧的
+  对话语义在 `stream-protocol.ts`（`[DONE]`、`backend_stream_error`、`choices[0].delta.content`）；
+  `stream.ts` 只负责 fetch、响应头（`X-Conversation-Id` / `X-Message-Id`）、信封错误与幂等收尾。
+  公共入口 `postChatCompletion` 与调用方（`hooks/use-chat-stream.ts`）签名不变。
 - **长会话渲染（对照 DSH）**：首屏只取最近 50 条，向上每次按 `messageId` 游标前插 50 条；消息行保持全量
   渲染，不做逐行虚拟化（与 DSH 一致：transcript 只反映已加载窗口，成本重头不在行数而在 O(n) 交互）。
   随数据量增长的 O(n) 点已消除：

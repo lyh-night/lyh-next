@@ -1,5 +1,6 @@
-import { EventSourceParserStream } from 'eventsource-parser/stream'
 import { apiUrl, isApiEnvelope, reportApiError } from '@/utils/api'
+import { decodeSseFrames } from '@/utils/sse'
+import { parseChatStreamFrame } from './stream-protocol'
 
 /**
  * AI 对话的 SSE 传输层（POST + JSON + credentials）。
@@ -9,17 +10,12 @@ import { apiUrl, isApiEnvelope, reportApiError } from '@/utils/api'
  * - 不做自动重连：重连会导致上游重复计费 / 消息重复落库，失败由用户手动重试；
  * - 中断通过外部 AbortController 传入，中止后静默返回（不算错误）。
  *
- * 协议：成功为 OpenAI `data: {...}` + `data: [DONE]`；心跳 `: ping` 注释帧由
- * EventSourceParserStream 消化；流内错误为 `data: {"error":{...,"type":"backend_stream_error"}}`。
+ * 分层：分帧在 `utils/sse.ts`，帧的对话语义在 `stream-protocol.ts`，
+ * 本文件只负责传输（fetch / 响应头 / 信封错误）与生命周期（幂等收尾、中止）。
+ *
+ * 协议：成功为 OpenAI `data: {...}` + `data: [DONE]`；心跳 `: ping` 注释帧由分帧层消化；
+ * 流内错误为 `data: {"error":{...,"type":"backend_stream_error"}}`。
  */
-
-interface UpstreamChunk {
-  choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>
-}
-
-interface UpstreamErrorFrame {
-  error?: { message?: string; type?: string }
-}
 
 export interface ChatStreamInput {
   content: string
@@ -98,35 +94,16 @@ export async function postChatCompletion(
   }
 
   try {
-    const events = response.body
-      .pipeThrough(new TextDecoderStream())
-      .pipeThrough(new EventSourceParserStream())
-    const reader = events.getReader()
+    for await (const frame of decodeSseFrames(response.body, input.signal)) {
+      const event = parseChatStreamFrame(frame)
+      if (!event) continue
 
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (input.signal?.aborted) break
-
-      if (value.data === '[DONE]') break
-      if (!value.data) continue
-
-      let payload: (UpstreamChunk & UpstreamErrorFrame) | null = null
-      try {
-        payload = JSON.parse(value.data) as UpstreamChunk & UpstreamErrorFrame
-      } catch {
-        // 非协议帧直接忽略，不让单帧异常中断整条流
-        continue
-      }
-      if (!payload) continue
-
-      if (payload.error?.type === 'backend_stream_error') {
-        handlers.onStreamError(payload.error.message || 'AI 流已中断')
+      if (event.type === 'done') break
+      if (event.type === 'error') {
+        handlers.onStreamError(event.message)
         break
       }
-
-      const delta = payload.choices?.[0]?.delta?.content
-      if (delta) handlers.onDelta(delta)
+      handlers.onDelta(event.text)
     }
   } catch (error) {
     // 读取中途异常：用户主动中止视为正常停止，其余交给调用方提示

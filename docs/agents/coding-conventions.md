@@ -80,7 +80,7 @@ Component → Hook → Service → API
 - 后端响应为扁平信封 `{ code, message, data, stack? }`；成功判断看 `code === 0`，由拦截器完成；失败码是业务码（见 `docs/features/err-handing.md`）。
 - 公开接口（登录、注册、登出、`/me`）必须传 `skipAuthRedirect: true`，避免业务失败（如密码错误 `20001`）触发全局跳登录。
 - 后端 JSON 接口成功与业务失败都返回 HTTP 200；新增 `POST` 路由记得加 `@HttpCode(200)`，避免 Nest 默认 201。
-- SSE / 流式接口不在该封装内处理：对话流由 `apps/frontend/src/components/chat/stream.ts` 单独实现（`fetch` + `eventsource-parser/stream`，不做自动重连）。
+- SSE / 流式接口不在该封装内处理：对话流由 `apps/frontend/src/components/chat/stream.ts` 实现（`fetch` + `eventsource-parser/stream`，不做自动重连）；分帧在 `src/utils/sse.ts`，帧的协议语义在 `stream-protocol.ts`。
 
 ---
 
@@ -127,7 +127,7 @@ Component → Hook → Service → API
 - 功能组件放 `apps/frontend/src/components/<feature>/`，一级子目录对应页面结构单元（对话页为
   `sidebar/`、`messages/`、`composer/`、`markdown/`），交互与状态放 `hooks/`
 - 功能根目录只保留 `index.tsx`（组合）、`types.ts`（共享类型）、`api.ts`（接口封装）、
-  `stream.ts`（SSE 等特殊传输层）
+  `stream.ts`（SSE 等特殊传输层）、`stream-protocol.ts`（对应协议语义）
 
 ### 组件粒度
 

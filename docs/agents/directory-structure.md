@@ -14,7 +14,7 @@ apps/
       components/        # app 内业务组件（chat / settings / header / workflow …）
       provider/          # SessionProvider（会话状态，登录由后端 cookie 承载）
       styles/            # 全局样式（Tailwind 入口）
-      utils/             # 应用级工具（api 后端地址 / 时间格式化 / 草稿存取）
+      utils/             # 应用级工具（api 后端地址 / 时间格式化 / 草稿存取 / SSE 分帧）
       middleware.ts
     public/              # 静态资源
     .env                 # AUTH_SECRET 与后端地址相关变量
@@ -101,12 +101,13 @@ App Router 业务页面内使用的组件，按功能分包：`chat/`、`setting
 - 可复用到全局时迁移到 `packages/components`（判定规则见 [coding-conventions.md §七](coding-conventions.md)）
 
 功能目录按页面结构组织一行子目录 + `hooks/`，根目录只留 `index.tsx`（组合）、`types.ts`、`api.ts`、
-`stream.ts`（传输层）。对话页当前结构：
+`stream.ts`（传输层）与 `stream-protocol.ts`（SSE 协议语义）。对话页当前结构：
 
 ```
 components/chat/
 ├─ index.tsx                 # ChatWorkspace：侧栏 + 消息区 + 输入区 + 设置弹窗
-├─ types.ts / api.ts / stream.ts   # 类型、JSON 接口封装、SSE 传输层
+├─ types.ts / api.ts         # 类型、JSON 接口封装
+├─ stream.ts / stream-protocol.ts  # SSE 传输与生命周期、帧的对话语义（分帧在 src/utils/sse.ts）
 ├─ hooks/                    # 交互与状态（副作用只允许出现在这里或 utils）
 │  ├─ use-chat.ts            # 组合 3 个领域 hook，对外 ChatController
 │  ├─ use-conversation-list.ts   # 列表刷新/分页/重命名/删除
