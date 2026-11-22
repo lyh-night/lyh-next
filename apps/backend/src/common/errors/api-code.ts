@@ -4,7 +4,7 @@
  * 规则（详见 docs/err-handing.md §6）：
  * - `0` 成功；非 0 失败；类型为 number；
  * - 按区间分段，只追加、不重排、不复用；废弃的码保留占位；
- * - 区间：`1xxxx` 通用、`2xxxx` 认证、`3xxxx` 对话、`4xxxx` 业务域（预留）、`9xxxx` 系统（预留）；
+ * - 区间：`1xxxx` 通用、`2xxxx` 认证、`3xxxx` 对话、`4xxxx` 文件、`5xxxx` 业务域（预留）、`9xxxx` 系统（预留）；
  * - 预期错误在抛错点显式指定业务码（`ApiException`），通用兜底码只用于未分类异常。
  */
 export const ApiCode = {
@@ -60,6 +60,20 @@ export const ApiCode = {
   CHAT_UPSTREAM_NOT_SSE: 30011,
   /** 流中断（仅 SSE 错误帧，不进信封） */
   CHAT_STREAM_INTERRUPTED: 30012,
+
+  // 文件预览（4xxxx）
+  /** 文件工作区不存在或已过期 */
+  FILE_WORKSPACE_NOT_FOUND: 40001,
+  /** 文件路径非法（绝对路径 / 目录穿越 / 空路径） */
+  FILE_PATH_INVALID: 40002,
+  /** 文件或单页内容超过上限 */
+  FILE_TOO_LARGE: 40003,
+  /** 文件数量或总大小超过上限 */
+  FILE_LIMIT_EXCEEDED: 40004,
+  /** 不是可预览的 UTF-8 文本 */
+  FILE_NOT_TEXT: 40005,
+  /** 文件不存在或不是普通文件 */
+  FILE_NOT_FOUND: 40006,
 } as const
 
 export type ApiCodeValue = (typeof ApiCode)[keyof typeof ApiCode]

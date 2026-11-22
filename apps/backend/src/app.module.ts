@@ -8,6 +8,7 @@ import { AppController } from './app.controller.js'
 import { AppService } from './app.service.js'
 import { AuthModule } from './auth/auth.module.js'
 import { ChatModule } from './chat/chat.module.js'
+import { FilesModule } from './files/files.module.js'
 import { CommonModule } from './common/common.module.js'
 import { validateEnv } from './common/config/env.validation.js'
 import { HealthModule } from './health/health.module.js'
@@ -44,6 +45,7 @@ import { PrismaModule } from './prisma/prisma.module.js'
     HealthModule,
     AuthModule,
     ChatModule,
+    FilesModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -415,7 +415,7 @@ model DhRenderTask {          // 离线合成线（§6-B）
 }
 ```
 
-**契约约定**：业务码启用 **4xxxx 段**（对齐 [err-handing.md](../features/err-handing.md) 码表分段习惯）；JSON 接口一律走统一信封；打断走 WS 事件 `dh.interrupt`（鉴权/生命周期遵循 realtime.md 已定约定）；TTS/驱动流式接口可参考 chat SSE 的「心跳 + 错误帧」做法。
+**契约约定**：业务码启用 **5xxxx 段**（对齐 [err-handing.md](../features/err-handing.md) 码表分段习惯）；JSON 接口一律走统一信封；打断走 WS 事件 `dh.interrupt`（鉴权/生命周期遵循 realtime.md 已定约定）；TTS/驱动流式接口可参考 chat SSE 的「心跳 + 错误帧」做法。
 
 ### 7.4 部署与合规风险
 

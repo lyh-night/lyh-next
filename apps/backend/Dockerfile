@@ -40,6 +40,9 @@ ENV NODE_ENV=production
 
 RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
 
+# 上传文件工作区目录：先以 nodejs 身份建好，命名卷初始化后仍可写
+RUN mkdir -p /app/apps/backend/storage && chown -R nodejs:nodejs /app/apps/backend/storage
+
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=prod-deps /app/apps/backend/node_modules ./apps/backend/node_modules
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist

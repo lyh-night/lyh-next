@@ -49,3 +49,6 @@ next-env.d.ts
 
 .mimocode/
 .pnpm-store/
+
+# 上传文件工作区（本地运行时生成）
+/apps/backend/storage/

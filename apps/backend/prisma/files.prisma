@@ -1,0 +1,16 @@
+// 文件预览相关模型：用户上传的文件夹工作区（临时，过期后清理）
+
+/// 一次「上传文件夹」对应一个工作区；目录内容落盘，这里只存元信息与配额计数
+model FileWorkspace {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String   @default("上传的文件夹")
+  fileCount  Int      @default(0)
+  totalBytes Int      @default(0)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}

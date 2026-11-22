@@ -9,6 +9,7 @@ export default function Nav() {
   const nav_list = [
     { label: '首页', value: 'home' },
     { label: '对话', value: 'chat' },
+    { label: '文件', value: 'files' },
     { label: '工作流', value: 'workflow' },
   ]
 

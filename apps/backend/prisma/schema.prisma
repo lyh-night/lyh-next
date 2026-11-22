@@ -6,7 +6,7 @@
 
 generator client {
   provider = "prisma-client"
-  output = "../src/generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -14,24 +14,25 @@ datasource db {
 }
 
 enum UserRole {
-    ADMIN
-    USER
+  ADMIN
+  USER
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?   @db.Text
-  accounts      Account[]
-  sessions      Session[]
-  conversations Conversation[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role      UserRole @default(USER)
-  hasAccess Boolean  @default(false)
+  id             String          @id @default(cuid())
+  name           String?
+  email          String          @unique
+  emailVerified  DateTime?
+  image          String?
+  password       String?         @db.Text
+  accounts       Account[]
+  sessions       Session[]
+  conversations  Conversation[]
+  fileWorkspaces FileWorkspace[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  role           UserRole        @default(USER)
+  hasAccess      Boolean         @default(false)
 }
 
 model Account {

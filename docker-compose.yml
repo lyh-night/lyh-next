@@ -52,6 +52,9 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    volumes:
+      # 上传文件工作区（临时，按 24h 清理）；容器重建后仍保留未过期的文件
+      - backend_storage:/app/apps/backend/storage
     restart: unless-stopped
 
   # 限流计数共享存储（多实例时必须；单实例也可留空 REDIS_URL 走内存）
@@ -83,3 +86,4 @@ services:
 
 volumes:
   postgres_data:
+  backend_storage:

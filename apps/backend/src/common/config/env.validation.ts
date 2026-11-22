@@ -73,6 +73,11 @@ export class EnvVariables {
   @IsString()
   /** 多实例部署时必填（限流计数共享），单实例留空走内存存储 */
   REDIS_URL: string = ''
+
+  @IsOptional()
+  @IsString()
+  /** 上传文件工作区落盘目录（相对路径基于后端进程 cwd） */
+  FILES_STORAGE_DIR: string = 'storage/files'
 }
 
 /**
